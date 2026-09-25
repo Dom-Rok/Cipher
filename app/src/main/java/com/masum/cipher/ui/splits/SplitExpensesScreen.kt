@@ -58,6 +58,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.masum.cipher.ui.goals.GoalsContract
+import com.masum.cipher.ui.goals.GoalsViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.masum.cipher.R
 import com.masum.cipher.core.data.local.entity.CustomCategoryEntity
@@ -120,9 +123,13 @@ fun SplitExpensesScreen(
     viewModel: DashboardViewModel,
     userPreferences: UserPreferences,
     onNavigateBack: () -> Unit,
-    onNavigateToPro: () -> Unit = {}
+    onNavigateToPro: () -> Unit = {},
+    onNavigateToCreateGoal: () -> Unit = {},
+    onNavigateToEditGoal: (Long) -> Unit = {},
+    goalsViewModel: GoalsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val goalsState by goalsViewModel.state.collectAsStateWithLifecycle()
     val settings by userPreferences.settingsFlow.collectAsStateWithLifecycle(initialValue = null)
     val view = LocalView.current
     val context = LocalContext.current
@@ -140,7 +147,6 @@ fun SplitExpensesScreen(
     var selectedTab by remember { mutableStateOf(SplitFilterTab.ALL) }
     var editingSplitTx by remember { mutableStateOf<TransactionEntity?>(null) }
     var showAddSheet by remember { mutableStateOf(false) }
-    var showAddGoalSheet by remember { mutableStateOf(false) }
     var draftStandaloneExpenseName by remember { mutableStateOf("") }
     var draftStandaloneTotalStr by remember { mutableStateOf("") }
     var draftStandaloneSplits by remember { mutableStateOf<List<SplitParticipant>>(emptyList()) }
@@ -257,7 +263,11 @@ fun SplitExpensesScreen(
                     } else {
                         IconButton(onClick = {
                             view.performVibrate(isHapticsEnabled, isLongPress = false)
-                            showAddGoalSheet = true
+                            if (!goalsState.isPro && goalsState.goals.size >= goalsState.freeGoalLimit) {
+                                goalsViewModel.handleIntent(GoalsContract.Intent.ShowProGate)
+                            } else {
+                                onNavigateToCreateGoal()
+                            }
                         }) {
                             Icon(
                                 imageVector = LucideIcons.Plus,
@@ -654,8 +664,9 @@ fun SplitExpensesScreen(
     }
     1 -> {
         com.masum.cipher.ui.goals.SavingsGoalsView(
-            showCreateSheetExternal = showAddGoalSheet,
-            onDismissCreateSheetExternal = { showAddGoalSheet = false },
+            viewModel = goalsViewModel,
+            onNavigateToCreateGoal = onNavigateToCreateGoal,
+            onNavigateToEditGoal = onNavigateToEditGoal,
             onNavigateToPro = onNavigateToPro
         )
     }

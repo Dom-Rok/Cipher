@@ -54,6 +54,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.masum.cipher.R
 import com.masum.cipher.core.data.local.entity.GoalEntity
+import com.masum.cipher.core.domain.model.CategoryColorRegistry
+import com.masum.cipher.core.domain.model.CategoryIconRegistry
 import com.masum.cipher.core.util.AppFormatters
 import com.masum.cipher.core.util.performVibrate
 import com.masum.cipher.ui.theme.DMSans
@@ -74,17 +76,13 @@ import androidx.compose.ui.graphics.Brush
 fun SavingsGoalsView(
     modifier: Modifier = Modifier,
     viewModel: GoalsViewModel = hiltViewModel(),
-    onCreateGoalClick: (() -> Unit)? = null,
-    showCreateSheetExternal: Boolean = false,
-    onDismissCreateSheetExternal: (() -> Unit)? = null,
+    onNavigateToCreateGoal: () -> Unit = {},
+    onNavigateToEditGoal: (Long) -> Unit = {},
     onNavigateToPro: () -> Unit = {}
 ) {
     val view = LocalView.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    var showCreateSheetInternal by remember { mutableStateOf(false) }
-    val showCreateSheet = showCreateSheetExternal || showCreateSheetInternal
-    var goalToEdit by remember { mutableStateOf<GoalEntity?>(null) }
     var activeAdjustGoal by remember { mutableStateOf<GoalEntity?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -116,6 +114,17 @@ fun SavingsGoalsView(
     val overallProgressPercent = if (state.totalTarget > 0.0) {
         ((state.totalSaved / state.totalTarget) * 100).toInt()
     } else 0
+
+    val isProLimited = !state.isPro && state.goals.size >= state.freeGoalLimit
+
+    val handleCreateGoalClick = {
+        view.performVibrate(state.isHapticsEnabled, isLongPress = false)
+        if (isProLimited) {
+            viewModel.handleIntent(GoalsContract.Intent.ShowProGate)
+        } else {
+            onNavigateToCreateGoal()
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyVerticalGrid(
@@ -150,44 +159,39 @@ fun SavingsGoalsView(
                                 Box(
                                     modifier = Modifier
                                         .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(EmeraldIncome.copy(alpha = 0.15f)),
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = LucideIcons.Target,
                                         contentDescription = null,
-                                        tint = EmeraldIncome,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
+
                                 Text(
                                     text = stringResource(R.string.goals_total_saved),
                                     style = Typography.labelMedium.copy(
-                                        fontFamily = DMSans,
+                                        fontFamily = Lato,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
+                                        fontSize = 11.5.sp,
+                                        letterSpacing = 0.8.sp
                                     ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
 
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(EmeraldIncome.copy(alpha = 0.15f))
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Text(
-                                    text = "$overallProgressPercent%",
-                                    style = Typography.labelSmall.copy(
-                                        fontFamily = DMSans,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
-                                    ),
-                                    color = EmeraldIncome
-                                )
-                            }
+                            Text(
+                                text = "$overallProgressPercent%",
+                                style = Typography.titleMedium.copy(
+                                    fontFamily = DMSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                ),
+                                color = EmeraldIncome
+                            )
                         }
 
                         Row(
@@ -248,17 +252,26 @@ fun SavingsGoalsView(
                                     )
                                 )
                             )
-                            .border(1.dp, Color(0xFFF59E0B).copy(alpha = 0.25f), RoundedCornerShape(18.dp))
+                            .border(
+                                1.dp,
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color(0xFFF59E0B).copy(alpha = 0.4f),
+                                        Color(0xFFEC4899).copy(alpha = 0.3f)
+                                    )
+                                ),
+                                RoundedCornerShape(18.dp)
+                            )
                             .clickable {
                                 view.performVibrate(state.isHapticsEnabled, isLongPress = false)
-                                onNavigateToPro()
+                                viewModel.handleIntent(GoalsContract.Intent.ShowProGate)
                             }
                             .padding(14.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -267,25 +280,26 @@ fun SavingsGoalsView(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .size(34.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFFF59E0B).copy(alpha = 0.18f)),
+                                        .background(Color(0xFFF59E0B).copy(alpha = 0.2f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = LucideIcons.Crown,
                                         contentDescription = null,
                                         tint = Color(0xFFF59E0B),
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(17.dp)
                                     )
                                 }
+
                                 Column {
                                     Text(
                                         text = stringResource(R.string.goals_free_limit_reached, state.goals.size, state.freeGoalLimit),
-                                        style = Typography.labelMedium.copy(
-                                            fontFamily = Lato,
+                                        style = Typography.titleSmall.copy(
+                                            fontFamily = DMSans,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp
+                                            fontSize = 13.5.sp
                                         ),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -299,6 +313,7 @@ fun SavingsGoalsView(
                                     )
                                 }
                             }
+
                             Icon(
                                 imageVector = LucideIcons.ChevronRight,
                                 contentDescription = null,
@@ -323,7 +338,7 @@ fun SavingsGoalsView(
                             modifier = Modifier
                                 .size(64.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -359,14 +374,7 @@ fun SavingsGoalsView(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Button(
-                            onClick = {
-                                view.performVibrate(state.isHapticsEnabled, isLongPress = false)
-                                if (onCreateGoalClick != null) {
-                                    onCreateGoalClick()
-                                } else {
-                                    showCreateSheetInternal = true
-                                }
-                            },
+                            onClick = handleCreateGoalClick,
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
@@ -407,66 +415,6 @@ fun SavingsGoalsView(
             }
         }
 
-        val isProLimited = !state.isPro && state.goals.size >= state.freeGoalLimit
-
-        LaunchedEffect(showCreateSheetExternal, isProLimited) {
-            if (showCreateSheetExternal && isProLimited) {
-                onDismissCreateSheetExternal?.invoke()
-                viewModel.handleIntent(GoalsContract.Intent.ShowProGate)
-            }
-        }
-
-        if (showCreateSheet && !isProLimited) {
-            CreateEditGoalSheet(
-                goalToEdit = null,
-                currencySymbol = state.currencySymbol,
-                isHapticsEnabled = state.isHapticsEnabled,
-                onDismiss = {
-                    showCreateSheetInternal = false
-                    onDismissCreateSheetExternal?.invoke()
-                },
-                onSaveGoal = { name, targetAmount, initialSaved, colorHex, iconName ->
-                    viewModel.handleIntent(
-                        GoalsContract.Intent.CreateGoal(
-                            name = name,
-                            targetAmount = targetAmount,
-                            initialSaved = initialSaved,
-                            colorHex = colorHex,
-                            iconName = iconName
-                        )
-                    )
-                    showCreateSheetInternal = false
-                    onDismissCreateSheetExternal?.invoke()
-                }
-            )
-        }
-
-        goalToEdit?.let { goal ->
-            CreateEditGoalSheet(
-                goalToEdit = goal,
-                currencySymbol = state.currencySymbol,
-                isHapticsEnabled = state.isHapticsEnabled,
-                onDismiss = { goalToEdit = null },
-                onSaveGoal = { name, targetAmount, savedAmount, colorHex, iconName ->
-                    viewModel.handleIntent(
-                        GoalsContract.Intent.UpdateGoal(
-                            id = goal.id,
-                            name = name,
-                            targetAmount = targetAmount,
-                            savedAmount = savedAmount,
-                            colorHex = colorHex,
-                            iconName = iconName
-                        )
-                    )
-                    goalToEdit = null
-                },
-                onDeleteGoal = {
-                    viewModel.handleIntent(GoalsContract.Intent.DeleteGoal(it))
-                    goalToEdit = null
-                }
-            )
-        }
-
         activeAdjustGoal?.let { goal ->
             DepositWithdrawGoalSheet(
                 goal = goal,
@@ -474,9 +422,9 @@ fun SavingsGoalsView(
                 isHapticsEnabled = state.isHapticsEnabled,
                 onDismiss = { activeAdjustGoal = null },
                 onEditGoal = {
-                    val target = goal
+                    val targetId = goal.id
                     activeAdjustGoal = null
-                    goalToEdit = target
+                    onNavigateToEditGoal(targetId)
                 },
                 onDeleteGoal = {
                     viewModel.handleIntent(GoalsContract.Intent.DeleteGoal(goal))

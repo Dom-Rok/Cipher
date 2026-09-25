@@ -1,5 +1,13 @@
 # Release Notes
 
+## [6.0.8]
+
+### Changed & Fixed
+- **Dedicated Screen for Goals**: Converted goal creation and editing into a dedicated separate screen instead of a bottom sheet.
+- **Fixed Create Goal Button**: Resolved issue where the save/create goal button was hidden or jumping.
+
+---
+
 ## [6.0.7]
 
 ### Added & Highlighted

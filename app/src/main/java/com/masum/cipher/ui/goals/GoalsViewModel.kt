@@ -61,6 +61,10 @@ class GoalsViewModel @Inject constructor(
                     _state.value = _state.value.copy(showProGateSheet = false)
                 }
                 is GoalsContract.Intent.CreateGoal -> {
+                    if (!_state.value.isPro && _state.value.goals.size >= _state.value.freeGoalLimit) {
+                        _state.value = _state.value.copy(showProGateSheet = true)
+                        return@launch
+                    }
                     goalRepository.createGoal(
                         name = intent.name,
                         targetAmount = intent.targetAmount,

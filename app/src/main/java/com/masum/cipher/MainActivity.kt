@@ -14,7 +14,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +66,9 @@ import com.masum.cipher.ui.accounts.analytics.AccountAnalyticsScreen
 import com.masum.cipher.ui.accounts.details.AccountDetailsScreen
 import com.masum.cipher.ui.categories.CategoriesScreen
 import com.masum.cipher.ui.components.FloatingNavBar
+import com.masum.cipher.ui.goals.CreateEditGoalScreen
+import com.masum.cipher.ui.goals.GoalsContract
+import com.masum.cipher.ui.goals.GoalsViewModel
 import com.masum.cipher.ui.components.LicenseRevokedDialog
 import com.masum.cipher.ui.components.LockScreen
 import com.masum.cipher.ui.components.TransactionDetailsSheet
@@ -273,28 +279,28 @@ class MainActivity : AppCompatActivity() {
                                 if (targetState.destination.route in listOf("dashboard", "insights", "split_expenses", "settings") && initialState.destination.route in listOf("dashboard", "insights", "split_expenses", "settings")) {
                                     fadeIn(tween(300)) + scaleIn(initialScale = 0.95f, animationSpec = tween(300, easing = FastOutSlowInEasing))
                                 } else {
-                                    slideInHorizontally(initialOffsetX = { it }, animationSpec = navSpec)
+                                    slideInHorizontally(initialOffsetX = { (it * 0.25f).toInt() }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(tween(300))
                                 }
                             },
                             exitTransition = { 
                                 if (targetState.destination.route in listOf("dashboard", "insights", "split_expenses", "settings") && initialState.destination.route in listOf("dashboard", "insights", "split_expenses", "settings")) {
                                     fadeOut(tween(300)) + scaleOut(targetScale = 1.05f, animationSpec = tween(300, easing = FastOutSlowInEasing))
                                 } else {
-                                    slideOutHorizontally(targetOffsetX = { -it }, animationSpec = navSpec)
+                                    slideOutHorizontally(targetOffsetX = { -(it * 0.25f).toInt() }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(300))
                                 }
                             },
                             popEnterTransition = { 
                                 if (targetState.destination.route in listOf("dashboard", "insights", "split_expenses", "settings") && initialState.destination.route in listOf("dashboard", "insights", "split_expenses", "settings")) {
                                     fadeIn(tween(300)) + scaleIn(initialScale = 0.95f, animationSpec = tween(300, easing = FastOutSlowInEasing))
                                 } else {
-                                    slideInHorizontally(initialOffsetX = { -it }, animationSpec = navSpec)
+                                    slideInHorizontally(initialOffsetX = { -(it * 0.25f).toInt() }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(tween(300))
                                 }
                             },
                             popExitTransition = { 
                                 if (targetState.destination.route in listOf("dashboard", "insights", "split_expenses", "settings") && initialState.destination.route in listOf("dashboard", "insights", "split_expenses", "settings")) {
                                     fadeOut(tween(300)) + scaleOut(targetScale = 1.05f, animationSpec = tween(300, easing = FastOutSlowInEasing))
                                 } else {
-                                    slideOutHorizontally(targetOffsetX = { it }, animationSpec = navSpec)
+                                    slideOutHorizontally(targetOffsetX = { (it * 0.25f).toInt() }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(300))
                                 }
                             }
                         ) {
@@ -324,7 +330,9 @@ class MainActivity : AppCompatActivity() {
                                             }
                                         }
                                     },
-                                    onNavigateToPro = { navController.navigate("cipher_pro") }
+                                    onNavigateToPro = { navController.navigate("cipher_pro") },
+                                    onNavigateToCreateGoal = { navController.navigate("create_goal") },
+                                    onNavigateToEditGoal = { goalId -> navController.navigate("edit_goal/$goalId") }
                                 )
                             }
                             composable("insights") {
@@ -494,6 +502,101 @@ class MainActivity : AppCompatActivity() {
                                         navController.popBackStack()
                                     }
                                 )
+                            }
+                            composable(
+                                route = "create_goal",
+                                enterTransition = {
+                                    slideInVertically(initialOffsetY = { it }, animationSpec = tween(350, easing = FastOutSlowInEasing)) + fadeIn(tween(300))
+                                },
+                                exitTransition = {
+                                    slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(300))
+                                },
+                                popEnterTransition = {
+                                    fadeIn(tween(300))
+                                },
+                                popExitTransition = {
+                                    slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(300))
+                                }
+                            ) {
+                                val viewModel: GoalsViewModel = hiltViewModel()
+                                val goalsState by viewModel.state.collectAsStateWithLifecycle()
+                                if (!goalsState.isPro && goalsState.goals.size >= goalsState.freeGoalLimit) {
+                                    LaunchedEffect(Unit) {
+                                        navController.popBackStack()
+                                        viewModel.handleIntent(GoalsContract.Intent.ShowProGate)
+                                    }
+                                }
+                                CreateEditGoalScreen(
+                                    goalToEdit = null,
+                                    currencySymbol = goalsState.currencySymbol,
+                                    isHapticsEnabled = goalsState.isHapticsEnabled,
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onSaveGoal = { name, targetAmount, initialSaved, colorHex, iconName ->
+                                        viewModel.handleIntent(
+                                            GoalsContract.Intent.CreateGoal(
+                                                name = name,
+                                                targetAmount = targetAmount,
+                                                initialSaved = initialSaved,
+                                                colorHex = colorHex,
+                                                iconName = iconName
+                                            )
+                                        )
+                                        navController.popBackStack()
+                                    }
+                                )
+                            }
+                            composable(
+                                route = "edit_goal/{goalId}",
+                                arguments = listOf(navArgument("goalId") { type = NavType.LongType }),
+                                enterTransition = {
+                                    slideInVertically(initialOffsetY = { it }, animationSpec = tween(350, easing = FastOutSlowInEasing)) + fadeIn(tween(300))
+                                },
+                                exitTransition = {
+                                    slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(300))
+                                },
+                                popEnterTransition = {
+                                    fadeIn(tween(300))
+                                },
+                                popExitTransition = {
+                                    slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(300))
+                                }
+                            ) { backStackEntry ->
+                                val goalId = backStackEntry.arguments?.getLong("goalId") ?: 0L
+                                val viewModel: GoalsViewModel = hiltViewModel()
+                                val goalsState by viewModel.state.collectAsStateWithLifecycle()
+                                val goalToEdit = goalsState.goals.find { it.id == goalId }
+
+                                if (goalToEdit != null) {
+                                    CreateEditGoalScreen(
+                                        goalToEdit = goalToEdit,
+                                        currencySymbol = goalsState.currencySymbol,
+                                        isHapticsEnabled = goalsState.isHapticsEnabled,
+                                        onNavigateBack = { navController.popBackStack() },
+                                        onSaveGoal = { name, targetAmount, savedAmount, colorHex, iconName ->
+                                            viewModel.handleIntent(
+                                                GoalsContract.Intent.UpdateGoal(
+                                                    id = goalId,
+                                                    name = name,
+                                                    targetAmount = targetAmount,
+                                                    savedAmount = savedAmount,
+                                                    colorHex = colorHex,
+                                                    iconName = iconName
+                                                )
+                                            )
+                                            navController.popBackStack()
+                                        },
+                                        onDeleteGoal = {
+                                            viewModel.handleIntent(GoalsContract.Intent.DeleteGoal(it))
+                                            navController.popBackStack()
+                                        }
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(MaterialTheme.colorScheme.background)
+                                    )
+                                }
                             }
                             composable("privacy_policy") {
                                 PrivacyPolicyScreen(onNavigateBack = { navController.popBackStack() })
