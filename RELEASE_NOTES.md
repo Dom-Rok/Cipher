@@ -1,5 +1,15 @@
 # Release Notes
 
+## [6.1.0]
+
+### Added & Improved
+- **Smart Budgeting for Transfers**: Money transferred between your own accounts (bank accounts, credit cards, or cash) is now excluded from income and expenses so your monthly budget reflects real spending accurately.
+- **Clear Transfer Destinations**: Transaction histories now clearly display the exact source and destination account names for every transfer (e.g., *Transfer to Savings*, *Transfer from Checking*).
+- **Expanded Account Colors & Icons**: Personalize accounts with an expandable palette of 32 designer colors and 66 curated icons.
+- **Goals & UI Refinements**: Polished goal management screen and smoother animations throughout account creation and editing.
+
+---
+
 ## [6.0.8]
 
 ### Changed & Fixed
