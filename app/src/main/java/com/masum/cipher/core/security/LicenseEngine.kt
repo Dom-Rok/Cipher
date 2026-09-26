@@ -55,7 +55,12 @@ data class LicenseValidationResult(
 )
 
 sealed class RemoteLicenseCheckResult {
-    data class Valid(val tier: ProTier, val deviceCount: Int, val maxDevices: Int) : RemoteLicenseCheckResult()
+    data class Valid(
+        val tier: ProTier,
+        val deviceCount: Int,
+        val maxDevices: Int,
+        val expiresAtEpochMs: Long = 0L
+    ) : RemoteLicenseCheckResult()
     data class Revoked(val reason: String) : RemoteLicenseCheckResult()
     data class Expired(val reason: String) : RemoteLicenseCheckResult()
     data class NotFound(val message: String) : RemoteLicenseCheckResult()
@@ -89,13 +94,21 @@ class LicenseEngine @Inject constructor() {
 
         if (isAlgorithmicPromoCode(sanitized)) {
             val tier = determineAlgorithmicTier(sanitized)
+            val now = System.currentTimeMillis()
+            val expiryMs = when (tier) {
+                ProTier.MONTHLY -> now + 30L * 24L * 60L * 60L * 1000L
+                ProTier.HALF_YEARLY, ProTier.SIX_MONTH -> now + 180L * 24L * 60L * 60L * 1000L
+                ProTier.ANNUAL -> now + 365L * 24L * 60L * 60L * 1000L
+                ProTier.LIFETIME, ProTier.PROMO, ProTier.DEVELOPER -> 0L
+                ProTier.FREE -> 0L
+            }
             return LicenseValidationResult(
                 isValid = true,
                 tier = tier,
                 orderId = "PROMO-${sanitized.takeLast(6).uppercase()}",
                 customerEmail = expectedEmail ?: "earlybird@cipher.app",
-                issuedAtEpochMs = System.currentTimeMillis(),
-                expiresAtEpochMs = 0L,
+                issuedAtEpochMs = now,
+                expiresAtEpochMs = expiryMs,
                 isExpired = false
             )
         }
@@ -323,13 +336,23 @@ class LicenseEngine @Inject constructor() {
                     val devCount = jsonResponse.optInt("deviceCount", 1)
                     val maxDev = jsonResponse.optInt("maxDevices", 3)
                     val deviceList = parseActiveDevices(jsonResponse.optJSONArray("devices"), deviceId)
+                    val parsedTier = parseTier(tierStr)
+                    val now = System.currentTimeMillis()
+                    val serverExpiry = jsonResponse.optLong("expiresAt", 0L)
+                    val expiryMs = if (serverExpiry > 0L) serverExpiry else when (parsedTier) {
+                        ProTier.MONTHLY -> now + 30L * 24L * 60L * 60L * 1000L
+                        ProTier.HALF_YEARLY, ProTier.SIX_MONTH -> now + 180L * 24L * 60L * 60L * 1000L
+                        ProTier.ANNUAL -> now + 365L * 24L * 60L * 60L * 1000L
+                        ProTier.LIFETIME, ProTier.PROMO, ProTier.DEVELOPER -> 0L
+                        ProTier.FREE -> 0L
+                    }
                     LicenseValidationResult(
                         isValid = true,
-                        tier = parseTier(tierStr),
+                        tier = parsedTier,
                         orderId = "DODO-${sanitized.takeLast(6).uppercase()}",
                         customerEmail = email,
-                        issuedAtEpochMs = System.currentTimeMillis(),
-                        expiresAtEpochMs = 0L,
+                        issuedAtEpochMs = now,
+                        expiresAtEpochMs = expiryMs,
                         isExpired = false,
                         deviceCount = devCount,
                         maxDevices = maxDev,
@@ -454,10 +477,21 @@ class LicenseEngine @Inject constructor() {
                     true
                 }
 
+                val parsedTier = parseTier(tierStr)
+                val serverExpiry = json.optLong("expiresAt", 0L)
+                val now = System.currentTimeMillis()
+                val expiryMs = if (serverExpiry > 0L) serverExpiry else when (parsedTier) {
+                    ProTier.MONTHLY -> now + 30L * 24L * 60L * 60L * 1000L
+                    ProTier.HALF_YEARLY, ProTier.SIX_MONTH -> now + 180L * 24L * 60L * 60L * 1000L
+                    ProTier.ANNUAL -> now + 365L * 24L * 60L * 60L * 1000L
+                    ProTier.LIFETIME, ProTier.PROMO, ProTier.DEVELOPER -> 0L
+                    ProTier.FREE -> 0L
+                }
+
                 if (!isDeviceRegistered) {
                     RemoteLicenseCheckResult.Revoked("Device has been revoked from this license")
                 } else {
-                    RemoteLicenseCheckResult.Valid(parseTier(tierStr), deviceCount, maxDevices)
+                    RemoteLicenseCheckResult.Valid(parsedTier, deviceCount, maxDevices, expiryMs)
                 }
             } else {
                 val errText = conn.errorStream?.bufferedReader()?.use(BufferedReader::readText) ?: ""

@@ -226,7 +226,8 @@ class MainActivity : AppCompatActivity() {
                                                 isPro = true,
                                                 tier = validation.tier.identifier,
                                                 token = licenseKey,
-                                                orderId = validation.orderId
+                                                orderId = validation.orderId,
+                                                expiresAt = validation.expiresAtEpochMs
                                             )
                                         }
                                     }

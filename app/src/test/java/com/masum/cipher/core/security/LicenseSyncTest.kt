@@ -87,4 +87,21 @@ class LicenseSyncTest {
         assertFalse(engine.isUuidFormat("CIPHER-LIFETIME-VIP2026-6AA7"))
         assertFalse(engine.isUuidFormat("invalid-uuid-string"))
     }
+
+    @Test
+    fun testPromoKeyExpiryCalculation() {
+        val engine = LicenseEngine()
+        val sixMonthKey = "CIPHER-6MONTH-REDDIT6M-1AC0"
+        val res = engine.validateLicense(sixMonthKey)
+        assertTrue(res.isValid)
+        assertEquals(ProTier.HALF_YEARLY, res.tier)
+        val now = System.currentTimeMillis()
+        assertTrue(res.expiresAtEpochMs > now)
+        val diffDays = (res.expiresAtEpochMs - res.issuedAtEpochMs) / (24L * 60L * 60L * 1000L)
+        assertEquals(180L, diffDays)
+
+        val lifetimeKey = "CIPHER-LIFETIME-VIP2026-6AA7"
+        val lifeRes = engine.validateLicense(lifetimeKey)
+        assertEquals(0L, lifeRes.expiresAtEpochMs)
+    }
 }

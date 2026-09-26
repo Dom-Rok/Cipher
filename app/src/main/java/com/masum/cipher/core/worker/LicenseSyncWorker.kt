@@ -58,6 +58,9 @@ class LicenseSyncWorker(
         return when (val result = licenseEngine.checkLicenseRemoteStatus(token, deviceId)) {
             is RemoteLicenseCheckResult.Valid -> {
                 userPreferences.setLastLicenseSyncTime(now)
+                if (result.expiresAtEpochMs > 0L) {
+                    userPreferences.updateProExpiry(result.expiresAtEpochMs)
+                }
                 Result.success()
             }
             is RemoteLicenseCheckResult.Revoked -> {

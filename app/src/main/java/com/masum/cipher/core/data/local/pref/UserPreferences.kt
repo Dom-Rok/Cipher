@@ -697,6 +697,15 @@ class UserPreferences @Inject constructor(
         }
     }
 
+    suspend fun updateProExpiry(expiresAt: Long) {
+        syncPrefs.edit()
+            .putLong("cached_pro_expiry", expiresAt)
+            .apply()
+        context.dataStore.edit { preferences ->
+            preferences[Keys.PRO_EXPIRES_AT] = expiresAt
+        }
+    }
+
     suspend fun deactivatePro() {
         setProStatus(isPro = false, tier = "FREE", token = null, orderId = null, expiresAt = 0L)
     }

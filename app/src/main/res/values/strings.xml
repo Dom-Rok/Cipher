@@ -366,6 +366,12 @@
     <string name="whats_new_header_title">Cipher Updates</string>
     <string name="whats_new_header_desc">Here is what changed across recent updates</string>
     <string name="whats_new_badge_latest">Latest</string>
+    <string name="whats_new_v610_transfers_title">Smart Budgeting for Transfers</string>
+    <string name="whats_new_v610_transfers_desc">Transfers between your bank, cash, and credit accounts are now excluded from income and expenses so your budget accurately reflects actual spending.</string>
+    <string name="whats_new_v610_transfer_names_title">Clear Transfer Destinations</string>
+    <string name="whats_new_v610_transfer_names_desc">Account transaction histories now clearly show source and destination account names for every transfer.</string>
+    <string name="whats_new_v610_palette_title">Expanded Account Colors &amp; Icons</string>
+    <string name="whats_new_v610_palette_desc">Personalize your accounts with expandable grids of 32 designer colors and 66 curated icons.</string>
     <string name="whats_new_v608_screen_title">Dedicated Screen for Goals</string>
     <string name="whats_new_v608_screen_desc">Converted goal creation and editing into a dedicated separate screen instead of a bottom sheet.</string>
     <string name="whats_new_v608_button_title">Fixed Create Goal Button</string>
