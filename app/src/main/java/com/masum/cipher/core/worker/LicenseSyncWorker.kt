@@ -43,6 +43,10 @@ class LicenseSyncWorker(
             return Result.success()
         }
 
+        if (licenseEngine.isAlgorithmicPromoCode(token)) {
+            return Result.success()
+        }
+
         val deviceId = Settings.Secure.getString(
             applicationContext.contentResolver,
             Settings.Secure.ANDROID_ID

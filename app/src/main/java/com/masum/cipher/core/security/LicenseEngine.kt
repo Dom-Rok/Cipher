@@ -100,6 +100,13 @@ class LicenseEngine @Inject constructor() {
             )
         }
 
+        if (isUuidFormat(sanitized)) {
+            return LicenseValidationResult(
+                isValid = false,
+                errorMessage = "Internet connection required to activate license key"
+            )
+        }
+
         val parts = sanitized.split(".")
         if (parts.size != 2) {
             return LicenseValidationResult(isValid = false, errorMessage = "Invalid license format")
@@ -171,12 +178,13 @@ class LicenseEngine @Inject constructor() {
 
     private val uuidRegex = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
+    fun isUuidFormat(token: String): Boolean {
+        return uuidRegex.matches(token.trim())
+    }
+
     fun isAlgorithmicPromoCode(token: String): Boolean {
         val trimmed = token.trim()
         val uppercase = trimmed.uppercase()
-        if (uuidRegex.matches(trimmed)) {
-            return true
-        }
         val prefixes = listOf(
             "CIPHER-LIFETIME-",
             "CIPHER-ANNUAL-",
@@ -199,7 +207,6 @@ class LicenseEngine @Inject constructor() {
 
     private fun determineAlgorithmicTier(token: String): ProTier {
         val uppercase = token.uppercase().trim()
-        if (uuidRegex.matches(token.trim())) return ProTier.LIFETIME
         return when {
             uppercase.startsWith("CIPHER-LIFETIME-") -> ProTier.LIFETIME
             uppercase.startsWith("CIPHER-ANNUAL-") -> ProTier.ANNUAL
@@ -269,9 +276,14 @@ class LicenseEngine @Inject constructor() {
             return@withContext LicenseValidationResult(isValid = false, errorMessage = "License key is empty")
         }
 
-        val localCheck = validateLicense(sanitized, email)
-        if (!localCheck.isValid) {
-            return@withContext localCheck
+        if (isAlgorithmicPromoCode(sanitized)) {
+            return@withContext validateLicense(sanitized, email)
+        }
+
+        val parts = sanitized.split(".")
+        if (parts.size == 2) {
+            val localCheck = validateLicense(sanitized, email)
+            if (localCheck.isValid) return@withContext localCheck
         }
 
         try {
@@ -307,15 +319,18 @@ class LicenseEngine @Inject constructor() {
                 val jsonResponse = JSONObject(responseText)
                 val isSuccess = jsonResponse.optBoolean("success", false)
                 if (isSuccess) {
-                    val tierStr = jsonResponse.optString("tier", localCheck.tier.identifier)
+                    val tierStr = jsonResponse.optString("tier", ProTier.LIFETIME.identifier)
                     val devCount = jsonResponse.optInt("deviceCount", 1)
                     val maxDev = jsonResponse.optInt("maxDevices", 3)
                     val deviceList = parseActiveDevices(jsonResponse.optJSONArray("devices"), deviceId)
-                    localCheck.copy(
+                    LicenseValidationResult(
                         isValid = true,
                         tier = parseTier(tierStr),
                         orderId = "DODO-${sanitized.takeLast(6).uppercase()}",
                         customerEmail = email,
+                        issuedAtEpochMs = System.currentTimeMillis(),
+                        expiresAtEpochMs = 0L,
+                        isExpired = false,
                         deviceCount = devCount,
                         maxDevices = maxDev,
                         activeDevices = deviceList
@@ -331,7 +346,10 @@ class LicenseEngine @Inject constructor() {
             }
         } catch (e: Exception) {
             Log.e("LicenseEngine", "activateLicenseRemote error: ${e.message}", e)
-            localCheck
+            LicenseValidationResult(
+                isValid = false,
+                errorMessage = "Internet connection required to activate this license key."
+            )
         }
     }
 

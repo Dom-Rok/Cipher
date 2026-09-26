@@ -59,4 +59,32 @@ class LicenseSyncTest {
         assertEquals(ProTier.MONTHLY, monthly)
         assertEquals(ProTier.HALF_YEARLY, halfYearly)
     }
+
+    @Test
+    fun testAlgorithmicPromoCodeValidation() {
+        val engine = LicenseEngine()
+        val validKey = "CIPHER-LIFETIME-VIP2026-6AA7"
+        val invalidKey = "CIPHER-LIFETIME-VIP2026-0000"
+        val fakeUuid = "eb17883c-da4c-4d62-8c33-b0a74aec0f36"
+
+        assertTrue(engine.isAlgorithmicPromoCode(validKey))
+        assertFalse(engine.isAlgorithmicPromoCode(invalidKey))
+        assertFalse(engine.isAlgorithmicPromoCode(fakeUuid))
+
+        val validResult = engine.validateLicense(validKey)
+        assertTrue(validResult.isValid)
+        assertEquals(ProTier.LIFETIME, validResult.tier)
+
+        val fakeUuidResult = engine.validateLicense(fakeUuid)
+        assertFalse(fakeUuidResult.isValid)
+    }
+
+    @Test
+    fun testUuidFormatDetection() {
+        val engine = LicenseEngine()
+        assertTrue(engine.isUuidFormat("eb17883c-da4c-4d62-8c33-b0a74aec0f36"))
+        assertTrue(engine.isUuidFormat("EB17883C-DA4C-4D62-8C33-B0A74AEC0F36"))
+        assertFalse(engine.isUuidFormat("CIPHER-LIFETIME-VIP2026-6AA7"))
+        assertFalse(engine.isUuidFormat("invalid-uuid-string"))
+    }
 }

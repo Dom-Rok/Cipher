@@ -68,11 +68,6 @@ class UserPreferences @Inject constructor(
         val isFlagged = syncPrefs.getBoolean("cached_is_pro", false)
         if (!isFlagged) return false
         val token = syncPrefs.getString("cached_license_token", null) ?: return false
-        val validation = com.masum.cipher.core.security.LicenseEngine().validateLicense(token)
-        if (!validation.isValid) {
-            syncPrefs.edit().putBoolean("cached_is_pro", false).putString("cached_pro_tier", "FREE").apply()
-            return false
-        }
         val expiresAt = syncPrefs.getLong("cached_pro_expiry", 0L)
         if (expiresAt > 0L && System.currentTimeMillis() > expiresAt) {
             syncPrefs.edit().putBoolean("cached_is_pro", false).putString("cached_pro_tier", "FREE").apply()
@@ -309,12 +304,8 @@ class UserPreferences @Inject constructor(
                     val token = preferences[Keys.PRO_LICENSE_TOKEN]
                     if (token.isNullOrBlank()) false
                     else {
-                        val validation = com.masum.cipher.core.security.LicenseEngine().validateLicense(token)
-                        if (!validation.isValid) false
-                        else {
-                            val expiresAt = preferences[Keys.PRO_EXPIRES_AT] ?: 0L
-                            expiresAt == 0L || System.currentTimeMillis() <= expiresAt
-                        }
+                        val expiresAt = preferences[Keys.PRO_EXPIRES_AT] ?: 0L
+                        expiresAt == 0L || System.currentTimeMillis() <= expiresAt
                     }
                 }
             },
@@ -322,10 +313,10 @@ class UserPreferences @Inject constructor(
                 val token = preferences[Keys.PRO_LICENSE_TOKEN]
                 if (token.isNullOrBlank()) "FREE"
                 else {
-                    val res = com.masum.cipher.core.security.LicenseEngine().validateLicense(token)
+                    val tier = preferences[Keys.PRO_TIER] ?: "FREE"
                     val expiresAt = preferences[Keys.PRO_EXPIRES_AT] ?: 0L
                     val isExpired = expiresAt > 0L && System.currentTimeMillis() > expiresAt
-                    if (res.isValid && !isExpired) res.tier.identifier else "FREE"
+                    if (!isExpired) tier else "FREE"
                 }
             },
             proLicenseToken = preferences[Keys.PRO_LICENSE_TOKEN],

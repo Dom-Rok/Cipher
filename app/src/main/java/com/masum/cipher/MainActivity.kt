@@ -216,7 +216,11 @@ class MainActivity : AppCompatActivity() {
                                     val licenseKey = dataUri.getQueryParameter("key")?.trim()
                                     val email = dataUri.getQueryParameter("email")?.trim()
                                     if (!licenseKey.isNullOrBlank()) {
-                                        val validation = licenseEngine.validateLicense(licenseKey, email)
+                                        val deviceId = android.provider.Settings.Secure.getString(
+                                            this@MainActivity.contentResolver,
+                                            android.provider.Settings.Secure.ANDROID_ID
+                                        ) ?: "device_${System.currentTimeMillis()}"
+                                        val validation = licenseEngine.activateLicenseRemote(licenseKey, email, deviceId)
                                         if (validation.isValid) {
                                             userPreferences.setProStatus(
                                                 isPro = true,
