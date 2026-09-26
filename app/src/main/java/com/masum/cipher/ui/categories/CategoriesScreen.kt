@@ -121,11 +121,11 @@ fun CategoriesScreen(
     }
 
     val totalExpense = remember(filteredTransactions) {
-        filteredTransactions.filter { !it.isIncome }.sumOf { it.amount }
+        filteredTransactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }.sumOf { it.amount }
     }
 
     val allCategoryItems = remember(filteredTransactions, totalExpense, state.customCategories) {
-        val expenses = filteredTransactions.filter { !it.isIncome }
+        val expenses = filteredTransactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }
         val categoryTxMap = expenses.groupBy { tx ->
             CategoryHelper.resolveCategory(tx.category, state.customCategories).name
         }

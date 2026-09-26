@@ -256,4 +256,17 @@ class GetDashboardDataUseCaseTest {
 
         assertEquals(-50.0, state.expenseComparisonPercent!!, 0.001)
     }
+
+    @Test
+    fun `transfers are completely excluded from dashboard timeline`() {
+        val transferTx = tx(2000.0, "Transfer to Savings", "TRANSFER", isIncome = false)
+        val normalTx = tx(100.0, "Coffee", "FOOD", isIncome = false)
+        stub(listOf(transferTx, normalTx), allTransactions = listOf(transferTx, normalTx))
+
+        val state = invoke()
+
+        assertEquals(1, state.transactions.size)
+        assertEquals("Coffee", state.transactions[0].merchant)
+        assertTrue(state.hasAnyTransactions)
+    }
 }

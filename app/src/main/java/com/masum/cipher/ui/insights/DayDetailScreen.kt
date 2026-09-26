@@ -94,11 +94,11 @@ fun DayDetailScreen(
     }
 
     val totalSpent = remember(dayTransactions) {
-        dayTransactions.filter { !it.isIncome }.sumOf { it.amount }
+        dayTransactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }.sumOf { it.amount }
     }
     
     val totalIncome = remember(dayTransactions) {
-        dayTransactions.filter { it.isIncome }.sumOf { it.amount }
+        dayTransactions.filter { it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }.sumOf { it.amount }
     }
 
     Scaffold(

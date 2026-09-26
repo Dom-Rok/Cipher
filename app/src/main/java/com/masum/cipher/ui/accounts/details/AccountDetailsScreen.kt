@@ -754,8 +754,8 @@ fun AccountDetailsScreen(
     }
 
     if (state.showTransferSheet) {
-        val outflowMerchantTemplate = stringResource(R.string.transfer_out_merchant, "")
-        val inflowMerchantTemplate = stringResource(R.string.transfer_in_merchant, "")
+        val outflowTpl = stringResource(R.string.transfer_out_merchant)
+        val inflowTpl = stringResource(R.string.transfer_in_merchant)
         TransferFundsSheet(
             accounts = state.allAccounts,
             initialSourceAccountId = state.account?.id,
@@ -764,14 +764,16 @@ fun AccountDetailsScreen(
             isHapticsEnabled = state.isHapticsEnabled,
             onDismiss = { viewModel.handleIntent(AccountDetailsContract.Intent.DismissTransferSheet) },
             onConfirmTransfer = { from, to, amount, note ->
+                val outflowMerchant = String.format(locale, outflowTpl, to.name)
+                val inflowMerchant = String.format(locale, inflowTpl, from.name)
                 viewModel.handleIntent(
                     AccountDetailsContract.Intent.TransferFunds(
                         fromAccount = from,
                         toAccount = to,
                         amount = amount,
                         note = note,
-                        outflowMerchantText = outflowMerchantTemplate,
-                        inflowMerchantText = inflowMerchantTemplate
+                        outflowMerchantText = outflowMerchant,
+                        inflowMerchantText = inflowMerchant
                     )
                 )
             }

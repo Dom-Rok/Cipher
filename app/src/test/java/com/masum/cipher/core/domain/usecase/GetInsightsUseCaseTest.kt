@@ -331,4 +331,42 @@ class GetInsightsUseCaseTest {
 
         assertEquals(70.0 / 7.0, state.spendingVelocity.currentWeekAvg, 0.001)
     }
+
+    @Test
+    fun `transfers are excluded from income, expenses, category breakdown and top merchants`() = runBlocking {
+        val transferOut = TransactionEntity(
+            amount = 2000.0,
+            merchant = "Transfer to Savings",
+            currency = "INR",
+            category = "TRANSFER",
+            timestamp = daysAgo(1),
+            rawSms = null,
+            isIncome = false
+        )
+        val transferIn = TransactionEntity(
+            amount = 2000.0,
+            merchant = "Transfer from Checking",
+            currency = "INR",
+            category = "TRANSFER",
+            timestamp = daysAgo(1),
+            rawSms = null,
+            isIncome = true
+        )
+        val realIncome = income(100.0, daysAgo = 2, merchant = "Client")
+        val realExpense = expense(50.0, daysAgo = 2, merchant = "Grocery Store", category = "GROCERIES")
+
+        val txList = listOf(transferOut, transferIn, realIncome, realExpense)
+        stub(
+            rangeTransactions = txList,
+            recentExpenses = listOf(realExpense),
+            allTransactions = txList
+        )
+
+        val state = useCase(TimeRange.from(TimePeriod.THIS_MONTH)).first()
+
+        assertEquals(100.0, state.monthlySummary.income, 0.001)
+        assertEquals(50.0, state.monthlySummary.expense, 0.001)
+        assertTrue(state.categoryBreakdown.none { it.category.equals("Transfer", ignoreCase = true) })
+        assertTrue(state.topMerchants.none { it.merchant.contains("Transfer", ignoreCase = true) })
+    }
 }

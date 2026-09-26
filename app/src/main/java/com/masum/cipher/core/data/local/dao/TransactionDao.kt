@@ -32,22 +32,22 @@ interface TransactionDao {
     @Delete
     suspend fun deleteTransaction(transaction: TransactionEntity)
 
-    @Query("SELECT SUM(amount) FROM transactions WHERE isIncome = 0")
+    @Query("SELECT SUM(amount) FROM transactions WHERE isIncome = 0 AND category != 'TRANSFER' COLLATE NOCASE")
     fun getTotalExpenses(): Flow<Double?>
 
-    @Query("SELECT SUM(amount) FROM transactions WHERE isIncome = 1")
+    @Query("SELECT SUM(amount) FROM transactions WHERE isIncome = 1 AND category != 'TRANSFER' COLLATE NOCASE")
     fun getTotalIncome(): Flow<Double?>
 
     @Query("SELECT * FROM transactions WHERE timestamp BETWEEN :startTime AND :endTime ORDER BY timestamp DESC")
     fun getTransactionsBetween(startTime: Long, endTime: Long): Flow<List<TransactionEntity>>
 
-    @Query("SELECT SUM(amount) FROM transactions WHERE isIncome = 0 AND timestamp BETWEEN :startTime AND :endTime")
+    @Query("SELECT SUM(amount) FROM transactions WHERE isIncome = 0 AND category != 'TRANSFER' COLLATE NOCASE AND timestamp BETWEEN :startTime AND :endTime")
     fun getTotalExpensesBetween(startTime: Long, endTime: Long): Flow<Double?>
 
-    @Query("SELECT SUM(amount) FROM transactions WHERE isIncome = 1 AND timestamp BETWEEN :startTime AND :endTime")
+    @Query("SELECT SUM(amount) FROM transactions WHERE isIncome = 1 AND category != 'TRANSFER' COLLATE NOCASE AND timestamp BETWEEN :startTime AND :endTime")
     fun getTotalIncomeBetween(startTime: Long, endTime: Long): Flow<Double?>
 
-    @Query("SELECT * FROM transactions WHERE isIncome = 0 AND timestamp >= :startTime")
+    @Query("SELECT * FROM transactions WHERE isIncome = 0 AND category != 'TRANSFER' COLLATE NOCASE AND timestamp >= :startTime")
     fun getExpensesSince(startTime: Long): Flow<List<TransactionEntity>>
 
     @Query("SELECT * FROM transactions WHERE timestamp >= :startTime")
@@ -59,10 +59,10 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE amount = :amount AND isIncome = :isIncome AND merchant = :merchant COLLATE NOCASE AND timestamp BETWEEN :startTime AND :endTime LIMIT 1")
     suspend fun findDuplicate(amount: Double, isIncome: Boolean, merchant: String, startTime: Long, endTime: Long): TransactionEntity?
 
-    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE isIncome = 0 AND timestamp >= :startTime")
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE isIncome = 0 AND category != 'TRANSFER' COLLATE NOCASE AND timestamp >= :startTime")
     suspend fun sumExpensesSince(startTime: Long): Double
 
-    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE isIncome = 1 AND timestamp >= :startTime")
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE isIncome = 1 AND category != 'TRANSFER' COLLATE NOCASE AND timestamp >= :startTime")
     suspend fun sumIncomeSince(startTime: Long): Double
 
     @Query("DELETE FROM transactions")
@@ -71,7 +71,7 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE category = 'OTHERS'")
     suspend fun getUncategorizedCount(): Int
 
-    @Query("SELECT COUNT(*) FROM transactions WHERE isIncome = 0 AND timestamp >= :startTime")
+    @Query("SELECT COUNT(*) FROM transactions WHERE isIncome = 0 AND category != 'TRANSFER' COLLATE NOCASE AND timestamp >= :startTime")
     suspend fun getExpensesCountSince(startTime: Long): Int
 
     @Query("UPDATE transactions SET category = :newCategory WHERE category = :oldCategory COLLATE NOCASE")

@@ -182,8 +182,8 @@ object PdfGenerator {
             return
         }
 
-        val expenseTransactions = transactions.filter { !it.isIncome }
-        val incomeTransactions = transactions.filter { it.isIncome }
+        val expenseTransactions = transactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }
+        val incomeTransactions = transactions.filter { it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }
         val totalExpense = expenseTransactions.sumOf { it.amount }
         val totalIncome = incomeTransactions.sumOf { it.amount }
         val net = totalIncome - totalExpense

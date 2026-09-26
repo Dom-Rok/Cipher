@@ -143,6 +143,7 @@ class GetInsightsUseCase @Inject constructor(
         val dailyIncomes = mutableMapOf<Long, Double>()
 
         transactions.forEach { tx ->
+            if (tx.category.equals("TRANSFER", ignoreCase = true)) return@forEach
             val txCal = Calendar.getInstance().apply { 
                 timeInMillis = tx.timestamp 
                 set(Calendar.HOUR_OF_DAY, 0)
@@ -185,21 +186,23 @@ class GetInsightsUseCase @Inject constructor(
     }
 
     private fun calculateHeatmap(transactions: List<TransactionEntity>): Map<Long, Double> {
-        return transactions.groupBy { tx ->
-            val cal = Calendar.getInstance().apply { timeInMillis = tx.timestamp }
-            cal.set(Calendar.HOUR_OF_DAY, 0)
-            cal.set(Calendar.MINUTE, 0)
-            cal.set(Calendar.SECOND, 0)
-            cal.set(Calendar.MILLISECOND, 0)
-            cal.timeInMillis
-        }.mapValues { entry -> entry.value.sumOf { it.amount } }
+        return transactions
+            .filter { !it.category.equals("TRANSFER", ignoreCase = true) }
+            .groupBy { tx ->
+                val cal = Calendar.getInstance().apply { timeInMillis = tx.timestamp }
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                cal.timeInMillis
+            }.mapValues { entry -> entry.value.sumOf { it.amount } }
     }
 
     private fun calculateCategories(
         transactions: List<TransactionEntity>,
         customCategories: List<CustomCategoryEntity>
     ): List<DashboardContract.CategoryData> {
-        val expenses = transactions.filter { !it.isIncome }
+        val expenses = transactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }
         val total = expenses.sumOf { it.amount }
         if (total <= 0.0) return emptyList()
 
@@ -217,7 +220,8 @@ class GetInsightsUseCase @Inject constructor(
     }
 
     private fun calculateTopMerchants(transactions: List<TransactionEntity>): List<InsightsContract.MerchantData> {
-        return transactions.asSequence().filter { !it.isIncome }
+        return transactions.asSequence()
+            .filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }
             .groupBy { it.merchant.trim() }
             .map { (merchant, txs) ->
                 InsightsContract.MerchantData(
@@ -237,7 +241,7 @@ class GetInsightsUseCase @Inject constructor(
 
         val monthTxs = transactions.filter { tx ->
             val txCal = Calendar.getInstance().apply { timeInMillis = tx.timestamp }
-            txCal.get(Calendar.MONTH) == currentMonth && txCal.get(Calendar.YEAR) == currentYear
+            txCal.get(Calendar.MONTH) == currentMonth && txCal.get(Calendar.YEAR) == currentYear && !tx.category.equals("TRANSFER", ignoreCase = true)
         }
 
         val income = monthTxs.filter { it.isIncome }.sumOf { it.amount }
@@ -251,7 +255,7 @@ class GetInsightsUseCase @Inject constructor(
         val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         val amounts = DoubleArray(7)
 
-        transactions.filter { !it.isIncome }.forEach { tx ->
+        transactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }.forEach { tx ->
             val txCal = Calendar.getInstance().apply { timeInMillis = tx.timestamp }
             val dayIndex = (txCal.get(Calendar.DAY_OF_WEEK) - Calendar.MONDAY + 7) % 7
             amounts[dayIndex] += tx.amount
@@ -271,7 +275,7 @@ class GetInsightsUseCase @Inject constructor(
     private fun calculatePeakHours(transactions: List<TransactionEntity>): List<InsightsContract.PeakHourData> {
         val buckets = mutableMapOf("Morning" to 0.0, "Afternoon" to 0.0, "Evening" to 0.0, "Night" to 0.0)
 
-        transactions.filter { !it.isIncome }.forEach { tx ->
+        transactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }.forEach { tx ->
             val hour = Calendar.getInstance().apply { timeInMillis = tx.timestamp }.get(Calendar.HOUR_OF_DAY)
             val label = when (hour) {
                 in 6..11 -> "Morning"
@@ -301,7 +305,7 @@ class GetInsightsUseCase @Inject constructor(
         }.timeInMillis
 
         val spendDays = transactions.asSequence()
-            .filter { !it.isIncome }
+            .filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }
             .map { tx ->
                 Calendar.getInstance().apply {
                     timeInMillis = tx.timestamp
@@ -323,7 +327,7 @@ class GetInsightsUseCase @Inject constructor(
     }
 
     private fun calculateAvgTransactionSize(transactions: List<TransactionEntity>): Double {
-        val expenses = transactions.filter { !it.isIncome }
+        val expenses = transactions.filter { !it.isIncome && !it.category.equals("TRANSFER", ignoreCase = true) }
         return if (expenses.isNotEmpty()) expenses.sumOf { it.amount } / expenses.size else 0.0
     }
 }
