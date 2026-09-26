@@ -1,6 +1,8 @@
 package com.masum.cipher.ui.accounts
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -53,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -90,58 +93,19 @@ import compose.icons.lucideicons.Plus
 import compose.icons.lucideicons.ShieldCheck
 import compose.icons.lucideicons.Smartphone
 import compose.icons.lucideicons.Wallet
+import com.masum.cipher.core.domain.model.CategoryColorRegistry
+import com.masum.cipher.core.domain.model.CategoryIconRegistry
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-val AccountPaletteColors = listOf(
-    0xFF4F46E5,
-    0xFF059669,
-    0xFFE11D48,
-    0xFFD97706,
-    0xFF0891B2,
-    0xFF9333EA,
-    0xFF1E293B,
-    0xFFBE185D,
-    0xFF2563EB,
-    0xFF0D9488,
-    0xFFD946EF,
-    0xFFF59E0B,
-    0xFF10B981,
-    0xFF6366F1,
-    0xFF84CC16,
-    0xFF0F172A
-)
+val AccountPaletteColors = CategoryColorRegistry.COLORS
 
 fun getAccountIconVector(iconName: String): ImageVector {
-    return when (iconName) {
-        "Landmark" -> LucideIcons.Landmark
-        "Wallet" -> LucideIcons.Wallet
-        "CreditCard" -> LucideIcons.CreditCard
-        "PiggyBank" -> LucideIcons.PiggyBank
-        "Smartphone" -> LucideIcons.Smartphone
-        "Briefcase" -> LucideIcons.Briefcase
-        "Building2" -> LucideIcons.Building2
-        "ShieldCheck" -> LucideIcons.ShieldCheck
-        "Globe" -> LucideIcons.Globe
-        "TrendingUp" -> LucideIcons.Briefcase
-        "Coins", "CircleDollarSign" -> LucideIcons.Smartphone
-        else -> LucideIcons.Layers
-    }
+    return CategoryIconRegistry.getIcon(iconName)
 }
 
-val AvailableAccountIcons = listOf(
-    "Landmark",
-    "Wallet",
-    "CreditCard",
-    "PiggyBank",
-    "Smartphone",
-    "Briefcase",
-    "Building2",
-    "ShieldCheck",
-    "Globe",
-    "Layers"
-)
+val AvailableAccountIcons = CategoryIconRegistry.ICONS.map { it.first }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -155,8 +119,6 @@ fun CreateEditAccountScreen(
 ) {
     val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
-    val colorScrollState = rememberScrollState()
-    val iconScrollState = rememberScrollState()
 
     var name by remember(accountToEdit) { mutableStateOf(accountToEdit?.name ?: "") }
     var selectedType by remember(accountToEdit) { mutableStateOf(accountToEdit?.type?.let { AccountType.fromKey(it) } ?: AccountType.BANK) }
@@ -173,8 +135,9 @@ fun CreateEditAccountScreen(
     var selectedIcon by remember(accountToEdit) { mutableStateOf(accountToEdit?.iconName ?: (accountToEdit?.type?.let { AccountType.fromKey(it) } ?: AccountType.BANK).defaultIcon) }
     var isDefault by remember(accountToEdit) { mutableStateOf(accountToEdit?.isDefault ?: false) }
     var last4Input by remember(accountToEdit) { mutableStateOf(accountToEdit?.accountNumberLast4 ?: "") }
-
     var isTypeDropdownExpanded by remember { mutableStateOf(false) }
+    var isColorsExpanded by remember { mutableStateOf(false) }
+    var isIconsExpanded by remember { mutableStateOf(false) }
 
     val rawBalanceNumber = balanceInput.replace(",", ".").toDoubleOrNull() ?: 0.0
     val parsedBalance = if (isNegativeBalance) -rawBalanceNumber else rawBalanceNumber
@@ -662,8 +625,9 @@ fun CreateEditAccountScreen(
                     .clip(RoundedCornerShape(20.dp))
                     .background(MaterialTheme.colorScheme.surface)
                     .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
+                    .animateContentSize()
                     .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -671,7 +635,7 @@ fun CreateEditAccountScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.account_theme_accent_label),
+                        text = stringResource(R.string.goals_select_color),
                         style = Typography.labelSmall.copy(
                             fontFamily = Lato,
                             fontWeight = FontWeight.Bold,
@@ -681,80 +645,86 @@ fun CreateEditAccountScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = {
-                                view.performVibrate(isHapticsEnabled, isLongPress = false)
-                                coroutineScope.launch {
-                                    colorScrollState.animateScrollBy(-220f)
-                                }
-                            },
-                            modifier = Modifier.size(26.dp)
-                        ) {
-                            Icon(
-                                imageVector = LucideIcons.ChevronLeft,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                    val colorChevronRotation by animateFloatAsState(
+                        targetValue = if (isColorsExpanded) 180f else 0f,
+                        label = "colorChevronRotation"
+                    )
 
-                        IconButton(
-                            onClick = {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                            .clickable {
                                 view.performVibrate(isHapticsEnabled, isLongPress = false)
-                                coroutineScope.launch {
-                                    colorScrollState.animateScrollBy(220f)
-                                }
-                            },
-                            modifier = Modifier.size(26.dp)
-                        ) {
-                            Icon(
-                                imageVector = LucideIcons.ChevronRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                                isColorsExpanded = !isColorsExpanded
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (isColorsExpanded) stringResource(R.string.less) else stringResource(R.string.more),
+                            style = Typography.labelSmall.copy(
+                                fontFamily = Lato,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Icon(
+                            imageVector = LucideIcons.ChevronDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .rotate(colorChevronRotation)
+                        )
                     }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(colorScrollState),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AccountPaletteColors.forEach { colorLong ->
-                        val isSelected = selectedColor == colorLong
-                        val color = Color(colorLong)
+                val allColorRows = CategoryColorRegistry.COLORS.chunked(8)
+                val visibleColorRows = if (isColorsExpanded) {
+                    allColorRows
+                } else {
+                    val selectedRowIndex = allColorRows.indexOfFirst { it.contains(selectedColor) }.coerceAtLeast(0)
+                    listOf(allColorRows[selectedRowIndex])
+                }
 
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .border(
-                                    width = if (isSelected) 2.5.dp else 1.dp,
-                                    color = if (isSelected) Color.White else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                                .clickable {
-                                    view.performVibrate(isHapticsEnabled, isLongPress = false)
-                                    selectedColor = colorLong
-                                },
-                            contentAlignment = Alignment.Center
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    visibleColorRows.forEach { rowColors ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = LucideIcons.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                            rowColors.forEach { colorLong ->
+                                val isSelected = selectedColor == colorLong
+                                val color = Color(colorLong.toInt())
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .border(
+                                            width = if (isSelected) 2.5.dp else 1.dp,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                            shape = CircleShape
+                                        )
+                                        .clickable {
+                                            view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                            selectedColor = colorLong
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = LucideIcons.Check,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -767,8 +737,9 @@ fun CreateEditAccountScreen(
                     .clip(RoundedCornerShape(20.dp))
                     .background(MaterialTheme.colorScheme.surface)
                     .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
+                    .animateContentSize()
                     .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -776,7 +747,7 @@ fun CreateEditAccountScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.account_icon_label),
+                        text = stringResource(R.string.goals_select_icon),
                         style = Typography.labelSmall.copy(
                             fontFamily = Lato,
                             fontWeight = FontWeight.Bold,
@@ -786,78 +757,92 @@ fun CreateEditAccountScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = {
-                                view.performVibrate(isHapticsEnabled, isLongPress = false)
-                                coroutineScope.launch {
-                                    iconScrollState.animateScrollBy(-220f)
-                                }
-                            },
-                            modifier = Modifier.size(26.dp)
-                        ) {
-                            Icon(
-                                imageVector = LucideIcons.ChevronLeft,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                    val iconChevronRotation by animateFloatAsState(
+                        targetValue = if (isIconsExpanded) 180f else 0f,
+                        label = "iconChevronRotation"
+                    )
 
-                        IconButton(
-                            onClick = {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                            .clickable {
                                 view.performVibrate(isHapticsEnabled, isLongPress = false)
-                                coroutineScope.launch {
-                                    iconScrollState.animateScrollBy(220f)
-                                }
-                            },
-                            modifier = Modifier.size(26.dp)
-                        ) {
-                            Icon(
-                                imageVector = LucideIcons.ChevronRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                                isIconsExpanded = !isIconsExpanded
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (isIconsExpanded) stringResource(R.string.less) else stringResource(R.string.more),
+                            style = Typography.labelSmall.copy(
+                                fontFamily = Lato,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Icon(
+                            imageVector = LucideIcons.ChevronDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .rotate(iconChevronRotation)
+                        )
                     }
                 }
 
-                Row(
+                val allIconRows = CategoryIconRegistry.ICONS.chunked(6)
+                val visibleIconRows = if (isIconsExpanded) {
+                    allIconRows
+                } else {
+                    val selectedRowIndex = allIconRows.indexOfFirst { row -> row.any { it.first == selectedIcon } }.coerceAtLeast(0)
+                    listOf(allIconRows[selectedRowIndex])
+                }
+
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(iconScrollState),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    AvailableAccountIcons.forEach { iconName ->
-                        val isSelected = selectedIcon == iconName
-
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) Color(selectedColor).copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                .border(
-                                    width = if (isSelected) 1.5.dp else 0.8.dp,
-                                    color = if (isSelected) Color(selectedColor) else MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable {
-                                    view.performVibrate(isHapticsEnabled, isLongPress = false)
-                                    selectedIcon = iconName
-                                },
-                            contentAlignment = Alignment.Center
+                    visibleIconRows.forEach { rowIcons ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(
-                                imageVector = getAccountIconVector(iconName),
-                                contentDescription = iconName,
-                                tint = if (isSelected) Color(selectedColor) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            rowIcons.forEach { (iconName, iconVector) ->
+                                val isSelected = selectedIcon == iconName
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isSelected) Color(selectedColor.toInt()).copy(alpha = 0.22f) else MaterialTheme.colorScheme.surface)
+                                        .border(
+                                            width = if (isSelected) 1.5.dp else 0.8.dp,
+                                            color = if (isSelected) Color(selectedColor.toInt()) else MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                        .clickable {
+                                            view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                            selectedIcon = iconName
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = iconVector,
+                                        contentDescription = iconName,
+                                        tint = if (isSelected) Color(selectedColor.toInt()) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
