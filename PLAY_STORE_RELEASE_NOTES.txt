@@ -1,0 +1,5 @@
+What's New in v6.1.0:
+• Accurate Budgeting: Transfers between your bank accounts, cash, and credit cards are now excluded from income & expenses so your monthly budget reflects real spending.
+• Clear Transfer Destinations: Account transactions now clearly show transfer source and destination names.
+• Expanded Account Styling: Personalize your accounts with an expandable palette of 32 colors and 66 icons.
+• UI & Performance Polish: Smoother animations and stability improvements.
