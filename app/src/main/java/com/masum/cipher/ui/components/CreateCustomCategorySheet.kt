@@ -9,14 +9,17 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,12 +33,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,11 +47,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.masum.cipher.R
 import com.masum.cipher.core.data.local.entity.CustomCategoryEntity
 import com.masum.cipher.core.domain.model.CategoryColorRegistry
@@ -77,7 +81,8 @@ fun CreateCustomCategorySheet(
     onDeleteCategory: ((CustomCategoryEntity) -> Unit)? = null
 ) {
     val view = LocalView.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
 
     var categoryName by remember { mutableStateOf(existingCategory?.name ?: "") }
     var selectedIconName by remember { mutableStateOf(existingCategory?.iconName ?: "ShoppingBag") }
@@ -134,74 +139,107 @@ fun CreateCustomCategorySheet(
         )
     }
 
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = 10.dp, bottom = 6.dp)
-                    .size(width = 36.dp, height = 4.dp)
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), RoundedCornerShape(2.dp))
-            )
-        },
-        tonalElevation = 0.dp
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(if (isEditing) R.string.custom_category_edit_title else R.string.custom_category_new_title),
-                    style = Typography.titleLarge.copy(
-                        fontFamily = DMSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+        val errEmpty = stringResource(R.string.custom_category_error_empty)
+        val errExists = stringResource(R.string.custom_category_error_exists)
 
-                IconButton(
-                    onClick = {
-                        view.performVibrate(isHapticsEnabled, isLongPress = false)
-                        onDismiss()
-                    },
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                ) {
-                    Icon(
-                        imageVector = LucideIcons.X,
-                        contentDescription = stringResource(R.string.action_cancel),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
+        val performSave = {
+            val trimmed = categoryName.trim()
+            if (trimmed.isEmpty()) {
+                errorMessage = errEmpty
+                view.performVibrate(isHapticsEnabled, isLongPress = true)
+            } else {
+                val isDuplicateDefault = TransactionCategory.entries.any {
+                    it.name.equals(trimmed, ignoreCase = true) || it.displayName.equals(trimmed, ignoreCase = true)
+                }
+                val isDuplicateCustom = existingCustomCategories.any {
+                    it.id != (existingCategory?.id ?: -1L) && it.name.equals(trimmed, ignoreCase = true)
+                }
+
+                if (isDuplicateDefault || isDuplicateCustom) {
+                    errorMessage = errExists
+                    view.performVibrate(isHapticsEnabled, isLongPress = true)
+                } else {
+                    view.performVibrate(isHapticsEnabled, isLongPress = false)
+                    onSaveCategory(trimmed, selectedIconName, selectedColorHex)
+                    onDismiss()
                 }
             }
+        }
 
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
-                thickness = 1.dp
-            )
-
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .imePadding(),
+            contentAlignment = Alignment.Center
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .heightIn(max = screenHeight * 0.82f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+                        RoundedCornerShape(24.dp)
+                    )
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(if (isEditing) R.string.custom_category_edit_title else R.string.custom_category_new_title),
+                        style = Typography.titleLarge.copy(
+                            fontFamily = DMSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    IconButton(
+                        onClick = {
+                            view.performVibrate(isHapticsEnabled, isLongPress = false)
+                            onDismiss()
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = LucideIcons.X,
+                            contentDescription = stringResource(R.string.action_cancel),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
+                    thickness = 1.dp
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 OutlinedTextField(
                     value = categoryName,
                     onValueChange = {
@@ -368,12 +406,9 @@ fun CreateCustomCategorySheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val errEmpty = stringResource(R.string.custom_category_error_empty)
-                val errExists = stringResource(R.string.custom_category_error_exists)
-
                 val btnInteraction = remember { MutableInteractionSource() }
                 val btnPressed by btnInteraction.collectIsPressedAsState()
                 val btnScale by animateFloatAsState(targetValue = if (btnPressed) 0.97f else 1f, label = "btn_scale")
@@ -382,33 +417,11 @@ fun CreateCustomCategorySheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .scale(btnScale)
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .height(50.dp)
+                        .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.primary)
                         .clickable(interactionSource = btnInteraction, indication = null) {
-                            val trimmed = categoryName.trim()
-                            if (trimmed.isEmpty()) {
-                                errorMessage = errEmpty
-                                view.performVibrate(isHapticsEnabled, isLongPress = true)
-                                return@clickable
-                            }
-
-                            val isDuplicateDefault = TransactionCategory.entries.any {
-                                it.name.equals(trimmed, ignoreCase = true) || it.displayName.equals(trimmed, ignoreCase = true)
-                            }
-                            val isDuplicateCustom = existingCustomCategories.any {
-                                it.id != (existingCategory?.id ?: -1L) && it.name.equals(trimmed, ignoreCase = true)
-                            }
-
-                            if (isDuplicateDefault || isDuplicateCustom) {
-                                errorMessage = errExists
-                                view.performVibrate(isHapticsEnabled, isLongPress = true)
-                                return@clickable
-                            }
-
-                            view.performVibrate(isHapticsEnabled, isLongPress = false)
-                            onSaveCategory(trimmed, selectedIconName, selectedColorHex)
-                            onDismiss()
+                            performSave()
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -417,7 +430,7 @@ fun CreateCustomCategorySheet(
                         style = Typography.titleMedium.copy(
                             fontFamily = DMSans,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.5.sp
+                            fontSize = 15.sp
                         ),
                         color = MaterialTheme.colorScheme.onPrimary
                     )
@@ -427,8 +440,8 @@ fun CreateCustomCategorySheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(14.dp))
                             .background(RoseExpense.copy(alpha = 0.08f))
                             .clickable {
                                 view.performVibrate(isHapticsEnabled, isLongPress = false)
@@ -444,7 +457,7 @@ fun CreateCustomCategorySheet(
                                 imageVector = LucideIcons.Trash2,
                                 contentDescription = null,
                                 tint = RoseExpense,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
@@ -463,3 +476,5 @@ fun CreateCustomCategorySheet(
         }
     }
 }
+}
+

@@ -494,22 +494,43 @@ fun CategoriesScreen(
                                         if (categoryItem.isCustom) {
                                             val customIndex = state.customCategories.indexOfFirst { it.name.equals(categoryItem.name, ignoreCase = true) }
                                             val isCustomPaused = !isPro && customIndex >= 5
+                                            val customEntity = state.customCategories.find { it.name.equals(categoryItem.name, ignoreCase = true) }
 
                                             Box(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(4.dp))
                                                     .background(categoryColor.copy(alpha = 0.15f))
+                                                    .clickable {
+                                                        view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                                        if (isCustomPaused) {
+                                                            showProGateSheet = true
+                                                        } else if (customEntity != null) {
+                                                            editingCustomCategory = customEntity
+                                                            showCreateCategorySheet = true
+                                                        }
+                                                    }
                                                     .padding(horizontal = 5.dp, vertical = 1.dp)
                                             ) {
-                                                Text(
-                                                    text = stringResource(R.string.custom_category_badge),
-                                                    style = Typography.labelSmall.copy(
-                                                        fontFamily = Lato,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 9.sp
-                                                    ),
-                                                    color = categoryColor
-                                                )
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                                ) {
+                                                    Text(
+                                                        text = stringResource(R.string.custom_category_badge),
+                                                        style = Typography.labelSmall.copy(
+                                                            fontFamily = Lato,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 9.sp
+                                                        ),
+                                                        color = categoryColor
+                                                    )
+                                                    Icon(
+                                                        imageVector = LucideIcons.Pencil,
+                                                        contentDescription = null,
+                                                        tint = categoryColor,
+                                                        modifier = Modifier.size(9.dp)
+                                                    )
+                                                }
                                             }
 
                                             if (isCustomPaused) {

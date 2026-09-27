@@ -84,6 +84,22 @@ class DashboardViewModel @Inject constructor(
                     categoryRepository.addCustomCategory(intent.name, intent.iconName, intent.colorHex)
                 }
             }
+            is DashboardContract.Intent.UpdateCustomCategory -> {
+                viewModelScope.launch {
+                    categoryRepository.updateCustomCategory(
+                        intent.id,
+                        intent.oldName,
+                        intent.newName,
+                        intent.iconName,
+                        intent.colorHex
+                    )
+                }
+            }
+            is DashboardContract.Intent.DeleteCustomCategory -> {
+                viewModelScope.launch {
+                    categoryRepository.deleteCustomCategory(intent.category)
+                }
+            }
         }
     }
 

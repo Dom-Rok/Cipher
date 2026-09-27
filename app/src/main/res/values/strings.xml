@@ -490,6 +490,7 @@
     <string name="custom_category_add_btn">Add Category</string>
     <string name="custom_category_new">+ New Category</string>
     <string name="custom_category_badge">Custom</string>
+    <string name="custom_category_long_press_hint">Long press custom categories to edit or delete</string>
 
     <string name="pro_title">Cipher Pro</string>
     <string name="pro_subtitle">Unlock the ultimate offline financial vault</string>

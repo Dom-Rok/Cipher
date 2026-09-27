@@ -85,6 +85,7 @@ import com.masum.cipher.core.data.local.entity.TransactionEntity
 import com.masum.cipher.core.domain.model.CategoryHelper
 import com.masum.cipher.core.domain.model.CategoryIconRegistry
 import com.masum.cipher.core.domain.model.CategoryItem
+import com.masum.cipher.core.domain.model.TransactionCategory
 import com.masum.cipher.core.util.MathEvaluator
 import com.masum.cipher.core.util.performVibrate
 import com.masum.cipher.ui.theme.EmeraldIncome
@@ -156,6 +157,8 @@ fun TransactionDetailsSheet(
     onDelete: (() -> Unit)? = null,
     onDraftChange: ((TransactionEntity) -> Unit)? = null,
     onCreateCustomCategory: ((name: String, iconName: String, colorHex: Long) -> Unit)? = null,
+    onUpdateCustomCategory: ((id: Long, oldName: String, newName: String, iconName: String, colorHex: Long) -> Unit)? = null,
+    onDeleteCustomCategory: ((CustomCategoryEntity) -> Unit)? = null,
     isHapticsEnabled: Boolean = true,
     isPro: Boolean = true
 ) {
@@ -165,6 +168,7 @@ fun TransactionDetailsSheet(
     var selectedCategory by remember { mutableStateOf(CategoryHelper.resolveCategory(transaction.category, customCategories)) }
     var categoryExpanded by remember { mutableStateOf(false) }
     var showCreateCategorySheet by remember { mutableStateOf(false) }
+    var editingCustomCategoryEntity by remember { mutableStateOf<CustomCategoryEntity?>(null) }
     var note by remember { mutableStateOf(transaction.note ?: "") }
     var isNoteExpanded by remember { mutableStateOf(transaction.note?.isNotBlank() == true) }
     var selectedTimestamp by remember { mutableLongStateOf(transaction.timestamp) }
@@ -914,7 +918,13 @@ fun TransactionDetailsSheet(
                     },
                     onCreateNewCategory = if (onCreateCustomCategory != null) {
                         {
-                            categoryExpanded = false
+                            editingCustomCategoryEntity = null
+                            showCreateCategorySheet = true
+                        }
+                    } else null,
+                    onEditCustomCategory = if (onUpdateCustomCategory != null || onDeleteCustomCategory != null) {
+                        { entity ->
+                            editingCustomCategoryEntity = entity
                             showCreateCategorySheet = true
                         }
                     } else null,
@@ -922,14 +932,22 @@ fun TransactionDetailsSheet(
                 )
             }
 
-            if (showCreateCategorySheet && onCreateCustomCategory != null) {
+            if (showCreateCategorySheet && (onCreateCustomCategory != null || onUpdateCustomCategory != null)) {
                 CreateCustomCategorySheet(
-                    existingCategory = null,
+                    existingCategory = editingCustomCategoryEntity,
                     existingCustomCategories = customCategories,
                     isHapticsEnabled = isHapticsEnabled,
-                    onDismiss = { showCreateCategorySheet = false },
+                    onDismiss = {
+                        showCreateCategorySheet = false
+                        editingCustomCategoryEntity = null
+                    },
                     onSaveCategory = { name, iconName, colorHex ->
-                        onCreateCustomCategory(name, iconName, colorHex)
+                        val editing = editingCustomCategoryEntity
+                        if (editing != null && onUpdateCustomCategory != null) {
+                            onUpdateCustomCategory(editing.id, editing.name, name, iconName, colorHex)
+                        } else {
+                            onCreateCustomCategory?.invoke(name, iconName, colorHex)
+                        }
                         val newCat = CategoryItem(
                             name = name,
                             displayName = name,
@@ -940,8 +958,21 @@ fun TransactionDetailsSheet(
                             isCustom = true
                         )
                         selectedCategory = newCat
+                        categoryExpanded = false
                         showCreateCategorySheet = false
-                    }
+                        editingCustomCategoryEntity = null
+                    },
+                    onDeleteCategory = if (onDeleteCustomCategory != null) {
+                        { entity ->
+                            onDeleteCustomCategory(entity)
+                            if (selectedCategory.name.equals(entity.name, ignoreCase = true)) {
+                                selectedCategory = CategoryHelper.resolveCategory(TransactionCategory.OTHERS.name, customCategories)
+                            }
+                            categoryExpanded = false
+                            showCreateCategorySheet = false
+                            editingCustomCategoryEntity = null
+                        }
+                    } else null
                 )
             }
 

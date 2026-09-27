@@ -34,6 +34,8 @@ class DashboardContract {
         data class SaveTransactionSplits(val transactionId: Long, val splits: List<com.masum.cipher.core.domain.model.SplitParticipant>) : Intent()
         data class UpdateSplitPaidStatus(val splitId: Long, val isPaid: Boolean) : Intent()
         data class CreateCustomCategory(val name: String, val iconName: String, val colorHex: Long) : Intent()
+        data class UpdateCustomCategory(val id: Long, val oldName: String, val newName: String, val iconName: String, val colorHex: Long) : Intent()
+        data class DeleteCustomCategory(val category: com.masum.cipher.core.data.local.entity.CustomCategoryEntity) : Intent()
     }
 
     enum class FilterType { ALL, INCOME, EXPENSE }

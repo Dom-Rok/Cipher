@@ -526,6 +526,12 @@ fun DashboardScreen(
             },
             onCreateCustomCategory = { name, iconName, colorHex ->
                 viewModel.handleIntent(DashboardContract.Intent.CreateCustomCategory(name, iconName, colorHex))
+            },
+            onUpdateCustomCategory = { id, oldName, newName, iconName, colorHex ->
+                viewModel.handleIntent(DashboardContract.Intent.UpdateCustomCategory(id, oldName, newName, iconName, colorHex))
+            },
+            onDeleteCustomCategory = { entity ->
+                viewModel.handleIntent(DashboardContract.Intent.DeleteCustomCategory(entity))
             }
         )
     }
@@ -587,6 +593,12 @@ fun DashboardScreen(
             },
             onCreateCustomCategory = { name, iconName, colorHex ->
                 viewModel.handleIntent(DashboardContract.Intent.CreateCustomCategory(name, iconName, colorHex))
+            },
+            onUpdateCustomCategory = { id, oldName, newName, iconName, colorHex ->
+                viewModel.handleIntent(DashboardContract.Intent.UpdateCustomCategory(id, oldName, newName, iconName, colorHex))
+            },
+            onDeleteCustomCategory = { entity ->
+                viewModel.handleIntent(DashboardContract.Intent.DeleteCustomCategory(entity))
             }
         )
     }
@@ -927,7 +939,9 @@ private fun AddTransactionSheetHost(
     onDraftChange: (TransactionEntity?) -> Unit,
     onConfirm: (TransactionEntity) -> Unit,
     onConfirmWithSplits: (TransactionEntity, List<SplitParticipant>) -> Unit,
-    onCreateCustomCategory: (String, String, Long) -> Unit
+    onCreateCustomCategory: (String, String, Long) -> Unit,
+    onUpdateCustomCategory: ((Long, String, String, String, Long) -> Unit)? = null,
+    onDeleteCustomCategory: ((CustomCategoryEntity) -> Unit)? = null
 ) {
     TransactionDetailsSheet(
         transaction = draftTransaction ?: TransactionEntity(
@@ -949,6 +963,8 @@ private fun AddTransactionSheetHost(
         onSaveSplits = onSaveSplits,
         onDraftChange = onDraftChange,
         onCreateCustomCategory = onCreateCustomCategory,
+        onUpdateCustomCategory = onUpdateCustomCategory,
+        onDeleteCustomCategory = onDeleteCustomCategory,
         isHapticsEnabled = isHapticsEnabled
     )
 }
@@ -967,7 +983,9 @@ private fun EditTransactionSheetHost(
     onConfirm: (TransactionEntity) -> Unit,
     onConfirmWithSplits: (TransactionEntity, List<SplitParticipant>) -> Unit,
     onDelete: () -> Unit,
-    onCreateCustomCategory: (String, String, Long) -> Unit
+    onCreateCustomCategory: (String, String, Long) -> Unit,
+    onUpdateCustomCategory: ((Long, String, String, String, Long) -> Unit)? = null,
+    onDeleteCustomCategory: ((CustomCategoryEntity) -> Unit)? = null
 ) {
     val mappedParticipants = draftSplitsForTransaction ?: splitsForTransaction.map {
         SplitParticipant(
@@ -991,6 +1009,8 @@ private fun EditTransactionSheetHost(
         onSaveSplits = onSaveSplits,
         onDelete = onDelete,
         onCreateCustomCategory = onCreateCustomCategory,
+        onUpdateCustomCategory = onUpdateCustomCategory,
+        onDeleteCustomCategory = onDeleteCustomCategory,
         isHapticsEnabled = isHapticsEnabled
     )
 }

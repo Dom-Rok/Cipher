@@ -1,8 +1,10 @@
 package com.masum.cipher.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,7 +55,7 @@ import compose.icons.lucideicons.Check
 import compose.icons.lucideicons.Plus
 import compose.icons.lucideicons.X
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CategoryPickerSheet(
     selectedCategory: CategoryItem,
@@ -62,6 +64,7 @@ fun CategoryPickerSheet(
     isHapticsEnabled: Boolean = true,
     onCategorySelected: (CategoryItem) -> Unit,
     onCreateNewCategory: (() -> Unit)? = null,
+    onEditCustomCategory: ((CustomCategoryEntity) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val view = LocalView.current
@@ -98,15 +101,27 @@ fun CategoryPickerSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.category),
-                    style = Typography.titleLarge.copy(
-                        fontFamily = DMSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Column {
+                    Text(
+                        text = stringResource(R.string.category),
+                        style = Typography.titleLarge.copy(
+                            fontFamily = DMSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (customCategories.isNotEmpty() && onEditCustomCategory != null) {
+                        Text(
+                            text = stringResource(R.string.custom_category_long_press_hint),
+                            style = Typography.bodySmall.copy(
+                                fontFamily = Lato,
+                                fontSize = 11.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
 
                 IconButton(
                     onClick = {
@@ -188,6 +203,7 @@ fun CategoryPickerSheet(
                 items(allCategories, key = { it.name }) { category ->
                     val isSelected = category.name == selectedCategory.name
                     val categoryLabel = category.titleRes?.let { stringResource(it) } ?: category.displayName
+                    val customEntity = if (category.isCustom) customCategories.find { it.name.equals(category.name, ignoreCase = true) } else null
 
                     Row(
                         modifier = Modifier
@@ -202,11 +218,19 @@ fun CategoryPickerSheet(
                                 color = if (isSelected) category.color else MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
                                 shape = RoundedCornerShape(12.dp)
                             )
-                            .clickable {
-                                view.performVibrate(isHapticsEnabled, isLongPress = false)
-                                onCategorySelected(category)
-                                onDismiss()
-                            }
+                            .combinedClickable(
+                                onClick = {
+                                    view.performVibrate(isHapticsEnabled, isLongPress = false)
+                                    onCategorySelected(category)
+                                    onDismiss()
+                                },
+                                onLongClick = if (category.isCustom && customEntity != null && onEditCustomCategory != null) {
+                                    {
+                                        view.performVibrate(isHapticsEnabled, isLongPress = true)
+                                        onEditCustomCategory(customEntity)
+                                    }
+                                } else null
+                            )
                             .padding(horizontal = 10.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
