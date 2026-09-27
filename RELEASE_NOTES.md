@@ -1,5 +1,14 @@
 # Release Notes
 
+## [6.1.1]
+
+### Fixed & Improved
+- **Custom Category Confirmation Button**: Added a dedicated save and confirmation button when creating and editing custom categories, ensuring action buttons are always clearly visible above navigation bars.
+- **Quick Edit & Delete Categories**: Easily manage custom categories without digging into Settings. Long-press any custom category directly in the category selector sheet, or tap the custom category badge in Categories to edit or delete it immediately.
+- **Dialog & Layout Stability**: Refined popup presentation and system inset handling across all screen sizes and navigation modes to prevent visual overlap or flickering.
+
+---
+
 ## [6.1.0]
 
 ### Added & Improved

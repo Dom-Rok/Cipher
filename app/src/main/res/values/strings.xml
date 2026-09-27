@@ -366,6 +366,10 @@
     <string name="whats_new_header_title">Cipher Updates</string>
     <string name="whats_new_header_desc">Here is what changed across recent updates</string>
     <string name="whats_new_badge_latest">Latest</string>
+    <string name="whats_new_v611_category_btn_title">Custom Category Confirmation Button</string>
+    <string name="whats_new_v611_category_btn_desc">Added a clear save and confirmation button when creating and editing custom categories so buttons are never hidden.</string>
+    <string name="whats_new_v611_quick_edit_title">Quick Edit &amp; Delete Categories</string>
+    <string name="whats_new_v611_quick_edit_desc">Long press any custom category directly in the category picker or tap the category badge in Categories to edit or delete it instantly.</string>
     <string name="whats_new_v610_transfers_title">Smart Budgeting for Transfers</string>
     <string name="whats_new_v610_transfers_desc">Transfers between your bank, cash, and credit accounts are now excluded from income and expenses so your budget accurately reflects actual spending.</string>
     <string name="whats_new_v610_transfer_names_title">Clear Transfer Destinations</string>
