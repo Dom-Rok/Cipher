@@ -261,8 +261,9 @@ fun SettingsScreen(
     val matchNotifySubs = query.isBlank() || "subscription reminders".contains(query) || "recurring subscriptions".contains(query)
     val matchNotifyUncategorized = query.isBlank() || "uncategorized reminders".contains(query) || "action needed".contains(query)
     val matchNotifyApp = query.isBlank() || "new app suggestions".contains(query) || "payment app detected".contains(query)
+    val matchNotifyUpdates = query.isBlank() || "update notifications".contains(query) || "app updates".contains(query) || "update".contains(query)
     val matchNotifySystem = query.isBlank() || "system notification channels".contains(query) || "notification channels".contains(query)
-    val matchNotifications = query.isBlank() || "notifications".contains(query) || "alerts".contains(query) || matchNotifyTx || matchNotifyBudget || matchNotifyDaily || matchNotifyMonthly || matchNotifySubs || matchNotifyUncategorized || matchNotifyApp || matchNotifySystem
+    val matchNotifications = query.isBlank() || "notifications".contains(query) || "alerts".contains(query) || matchNotifyTx || matchNotifyBudget || matchNotifyDaily || matchNotifyMonthly || matchNotifySubs || matchNotifyUncategorized || matchNotifyApp || matchNotifyUpdates || matchNotifySystem
 
     val matchBudget = query.isBlank() || "monthly budget".contains(query) || "budget".contains(query)
     val matchGoals = query.isBlank() || "financial goals".contains(query) || matchBudget
@@ -1063,6 +1064,17 @@ Column(modifier = Modifier.fillMaxWidth()) {
                         onCheckedChange = { 
                             view.performVibrate(state.isHapticsEnabled, isLongPress = true)
                             viewModel.handleIntent(SettingsContract.Intent.SetNotifyNewAppDetected(it)) 
+                        }
+                    )
+                    if (matchNotifyUpdates) VaultSettingsSwitch(
+                        isHapticsEnabled = state.isHapticsEnabled,
+                        icon = LucideIcons.CloudDownload,
+                        title = stringResource(R.string.notify_app_updates_title),
+                        description = stringResource(R.string.notify_app_updates_desc),
+                        checked = state.notifyAppUpdates,
+                        onCheckedChange = { 
+                            view.performVibrate(state.isHapticsEnabled, isLongPress = true)
+                            viewModel.handleIntent(SettingsContract.Intent.SetNotifyAppUpdates(it)) 
                         }
                     )
                     if (matchNotifySystem) VaultSettingsItem(

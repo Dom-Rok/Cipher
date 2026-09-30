@@ -44,6 +44,7 @@ class LocalNotificationManager @Inject constructor(
         const val CHANNEL_REMINDERS = "cipher_reminders"
         const val CHANNEL_SYSTEM = "cipher_system"
         const val NOTIFICATION_ID_NEW_APP = 1001
+        const val NOTIFICATION_ID_APP_UPDATE = 1008
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -446,6 +447,52 @@ class LocalNotificationManager @Inject constructor(
                 .setAutoCancel(true)
 
             with(NotificationManagerCompat.from(context)) { notify(notificationId, builder.build()) }
+        }
+    }
+
+    fun showAppUpdateAvailableNotification() {
+        scope.launch {
+            val settings = userPreferences.settingsFlow.first()
+            if (!settings.notifyAppUpdates) return@launch
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) return@launch
+
+            val updateIntent = Intent(Intent.ACTION_VIEW).apply {
+                data = android.net.Uri.parse("market://details?id=${context.packageName}")
+                setPackage("com.android.vending")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+
+            val fallbackIntent = Intent(Intent.ACTION_VIEW).apply {
+                data = android.net.Uri.parse("https://play.google.com/store/apps/details?id=${context.packageName}")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+
+            val targetIntent = if (updateIntent.resolveActivity(context.packageManager) != null) {
+                updateIntent
+            } else {
+                fallbackIntent
+            }
+
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                NOTIFICATION_ID_APP_UPDATE,
+                targetIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val builder = NotificationCompat.Builder(context, CHANNEL_SYSTEM)
+                .setSmallIcon(com.masum.cipher.R.drawable.ic_notification)
+                .setColor("#4F46E5".toColorInt())
+                .setContentTitle(context.getString(R.string.notify_update_available_title))
+                .setContentText(context.getString(R.string.notify_update_available_desc))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+
+            with(NotificationManagerCompat.from(context)) { notify(NOTIFICATION_ID_APP_UPDATE, builder.build()) }
         }
     }
 }

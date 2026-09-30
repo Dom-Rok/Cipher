@@ -171,6 +171,8 @@ class UserPreferences @Inject constructor(
         val NOTIFY_UNCATEGORIZED_REMINDER = booleanPreferencesKey("notify_uncategorized_reminder")
         val NOTIFY_SUBSCRIPTIONS = booleanPreferencesKey("notify_subscriptions")
         val NOTIFY_NEW_APP_DETECTED = booleanPreferencesKey("notify_new_app_detected")
+        val NOTIFY_APP_UPDATES = booleanPreferencesKey("notify_app_updates")
+        val LAST_NOTIFIED_UPDATE_VERSION_CODE = intPreferencesKey("last_notified_update_version_code")
         val IGNORED_SUBSCRIPTIONS = stringSetPreferencesKey("ignored_subscriptions")
         val CATEGORY_BUDGETS = stringPreferencesKey("category_budgets")
         val IS_DYNAMIC_BUDGET_ENABLED = booleanPreferencesKey("is_dynamic_budget_enabled")
@@ -259,6 +261,8 @@ class UserPreferences @Inject constructor(
             notifyUncategorizedReminder = preferences[Keys.NOTIFY_UNCATEGORIZED_REMINDER] ?: true,
             notifySubscriptions = preferences[Keys.NOTIFY_SUBSCRIPTIONS] ?: true,
             notifyNewAppDetected = preferences[Keys.NOTIFY_NEW_APP_DETECTED] ?: true,
+            notifyAppUpdates = preferences[Keys.NOTIFY_APP_UPDATES] ?: true,
+            lastNotifiedUpdateVersionCode = preferences[Keys.LAST_NOTIFIED_UPDATE_VERSION_CODE] ?: 0,
             ignoredSubscriptions = preferences[Keys.IGNORED_SUBSCRIPTIONS] ?: emptySet(),
             categoryBudgets = preferences[Keys.CATEGORY_BUDGETS]?.let { jsonStr ->
                 try {
@@ -466,6 +470,14 @@ class UserPreferences @Inject constructor(
 
     suspend fun setNotifyNewAppDetected(enabled: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFY_NEW_APP_DETECTED] = enabled }
+    }
+
+    suspend fun setNotifyAppUpdates(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.NOTIFY_APP_UPDATES] = enabled }
+    }
+
+    suspend fun setLastNotifiedUpdateVersionCode(versionCode: Int) {
+        context.dataStore.edit { it[Keys.LAST_NOTIFIED_UPDATE_VERSION_CODE] = versionCode }
     }
 
     suspend fun addIgnoredSubscription(merchant: String) {
@@ -816,6 +828,8 @@ data class UserSettings(
     val notifyUncategorizedReminder: Boolean = true,
     val notifySubscriptions: Boolean = true,
     val notifyNewAppDetected: Boolean = true,
+    val notifyAppUpdates: Boolean = true,
+    val lastNotifiedUpdateVersionCode: Int = 0,
     val ignoredSubscriptions: Set<String> = emptySet(),
     val categoryBudgets: Map<String, Double> = emptyMap(),
     val customCurrencies: List<com.masum.cipher.core.domain.model.AppCurrency> = emptyList(),

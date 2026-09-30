@@ -64,6 +64,7 @@ class SettingsViewModel @Inject constructor(
             is SettingsContract.Intent.SetNotifyUncategorizedReminder -> updateNotifyUncategorizedReminder(intent.enabled)
             is SettingsContract.Intent.SetNotifySubscriptions -> updateNotifySubscriptions(intent.enabled)
             is SettingsContract.Intent.SetNotifyNewAppDetected -> updateNotifyNewAppDetected(intent.enabled)
+            is SettingsContract.Intent.SetNotifyAppUpdates -> updateNotifyAppUpdates(intent.enabled)
             is SettingsContract.Intent.SetHapticsEnabled -> updateHaptics(intent.enabled)
             is SettingsContract.Intent.SetAutoLockTimeout -> updateAutoLockTimeout(intent.timeout)
             is SettingsContract.Intent.SetCurrency -> updateCurrency(intent.code, intent.symbol)
@@ -116,6 +117,7 @@ class SettingsViewModel @Inject constructor(
                         notifyUncategorizedReminder = settings.notifyUncategorizedReminder,
                         notifySubscriptions = settings.notifySubscriptions,
                         notifyNewAppDetected = settings.notifyNewAppDetected,
+                        notifyAppUpdates = settings.notifyAppUpdates,
                         isHapticsEnabled = settings.isHapticsEnabled,
                         autoLockTimeout = settings.autoLockTimeout,
                         currencyCode = settings.currencyCode,
@@ -205,6 +207,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferences.setNotifyNewAppDetected(enabled)
             updateState { copy(notifyNewAppDetected = enabled) }
+        }
+    }
+
+    private fun updateNotifyAppUpdates(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setNotifyAppUpdates(enabled)
+            updateState { copy(notifyAppUpdates = enabled) }
         }
     }
 

@@ -132,6 +132,10 @@ fun WhatsNewSheet(
                         title = stringResource(R.string.whats_new_v612_speed_title),
                         description = stringResource(R.string.whats_new_v612_speed_desc)
                     )
+                    WhatsNewFeatureEntry(
+                        title = stringResource(R.string.whats_new_v612_updates_title),
+                        description = stringResource(R.string.whats_new_v612_updates_desc)
+                    )
                 }
 
                 HorizontalDivider(

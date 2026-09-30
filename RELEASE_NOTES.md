@@ -5,6 +5,7 @@
 ### Improved & Polished
 - **Better Battery Life**: Optimized background notification processing so Cipher consumes significantly less battery throughout the day.
 - **Faster Loading**: Instant loading for your dashboard summary and account histories, even with thousands of transactions.
+- **Update Notifications**: Get notified right away when a new update is ready on Google Play so you never miss important features or fixes (configurable in Settings > Notifications).
 - **Smoother Scrolling**: Enhanced UI rendering and general stability improvements across all screens.
 
 ---

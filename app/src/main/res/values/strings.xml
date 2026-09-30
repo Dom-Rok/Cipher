@@ -212,6 +212,10 @@
     <string name="notify_uncategorized_desc">Nudges to review transactions marked as Others</string>
     <string name="notify_new_app_title">New App Suggestions</string>
     <string name="notify_new_app_desc">Prompt to track newly installed banking or payment apps</string>
+    <string name="notify_app_updates_title">Update Notifications</string>
+    <string name="notify_app_updates_desc">Get notified when a new version of Cipher is available</string>
+    <string name="notify_update_available_title">New Update Available</string>
+    <string name="notify_update_available_desc">A new version of Cipher is ready on Google Play. Tap to update.</string>
     <string name="notify_system_title">System Notification Channels</string>
     <string name="notify_system_desc">Configure system channels and lockscreen visibility</string>
     <string name="monthly_budget_title">Monthly Budget</string>
@@ -370,6 +374,8 @@
     <string name="whats_new_v612_battery_desc">Optimized background processing so Cipher uses even less battery throughout the day.</string>
     <string name="whats_new_v612_speed_title">Faster Loading &amp; Performance</string>
     <string name="whats_new_v612_speed_desc">Instant loading for your dashboard and account histories, with smoother scrolling across all screens.</string>
+    <string name="whats_new_v612_updates_title">Update Notifications</string>
+    <string name="whats_new_v612_updates_desc">Get notified right away when a new update is ready so you never miss new features or fixes.</string>
     <string name="whats_new_v611_category_btn_title">Custom Category Confirmation Button</string>
     <string name="whats_new_v611_category_btn_desc">Added a clear save and confirmation button when creating and editing custom categories so buttons are never hidden.</string>
     <string name="whats_new_v611_quick_edit_title">Quick Edit &amp; Delete Categories</string>
