@@ -25,8 +25,8 @@ android {
         applicationId = "com.masum.cipher"
         minSdk = 26
         targetSdk = 37
-        versionCode = 42
-        versionName = "6.1.1"
+        versionCode = 43
+        versionName = "6.1.2"
         androidResources {
             localeFilters += listOf("en", "hi", "bn", "es", "fr", "de", "ja", "pl")
         }
@@ -64,6 +64,19 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes += listOf(
+                "META-INF/LICENSE*",
+                "META-INF/NOTICE*",
+                "META-INF/*.txt",
+                "META-INF/*.version",
+                "**/*.kotlin_builtins",
+                "**/*.kotlin_metadata"
+            )
+        }
     }
 
     lint {

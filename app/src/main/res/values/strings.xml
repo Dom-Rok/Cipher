@@ -366,6 +366,10 @@
     <string name="whats_new_header_title">Cipher Updates</string>
     <string name="whats_new_header_desc">Here is what changed across recent updates</string>
     <string name="whats_new_badge_latest">Latest</string>
+    <string name="whats_new_v612_battery_title">Better Battery Life</string>
+    <string name="whats_new_v612_battery_desc">Optimized background processing so Cipher uses even less battery throughout the day.</string>
+    <string name="whats_new_v612_speed_title">Faster Loading &amp; Performance</string>
+    <string name="whats_new_v612_speed_desc">Instant loading for your dashboard and account histories, with smoother scrolling across all screens.</string>
     <string name="whats_new_v611_category_btn_title">Custom Category Confirmation Button</string>
     <string name="whats_new_v611_category_btn_desc">Added a clear save and confirmation button when creating and editing custom categories so buttons are never hidden.</string>
     <string name="whats_new_v611_quick_edit_title">Quick Edit &amp; Delete Categories</string>
