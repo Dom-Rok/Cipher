@@ -70,7 +70,7 @@ class GetDashboardDataUseCase @Inject constructor(
                 }
             }
 
-            combine(transactionsFlow, repository.getAllTransactions(), categoryRepository.getAllCustomCategoriesFlow()) { transactions, allTxs, customCats ->
+            combine(transactionsFlow, repository.hasNonTransferTransactions(), categoryRepository.getAllCustomCategoriesFlow()) { transactions, hasTransactions, customCats ->
                 val filteredList = transactions.filter { tx ->
                     if (tx.category.equals("TRANSFER", ignoreCase = true)) return@filter false
 
@@ -102,7 +102,7 @@ class GetDashboardDataUseCase @Inject constructor(
                 DashboardContract.State(
                     isLoading = false,
                     transactions = filteredList.toPersistentList(),
-                    hasAnyTransactions = allTxs.any { !it.category.equals("TRANSFER", ignoreCase = true) },
+                    hasAnyTransactions = hasTransactions,
                     searchQuery = query,
                     activeFilter = filter.type,
                     filter = filter,

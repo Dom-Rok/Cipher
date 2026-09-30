@@ -15,6 +15,7 @@ class TransactionRepository @Inject constructor(
     private val widgetSyncManager: WidgetSyncManager
 ) {
     fun getAllTransactions(): Flow<List<TransactionEntity>> = transactionDao.getAllTransactions()
+    fun hasNonTransferTransactions(): Flow<Boolean> = transactionDao.hasNonTransferTransactions()
 
     suspend fun insertTransaction(transaction: TransactionEntity): TransactionEntity? {
         return processIncomingTransactionUseCase(transaction)

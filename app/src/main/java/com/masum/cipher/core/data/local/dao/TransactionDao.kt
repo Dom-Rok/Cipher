@@ -14,6 +14,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions ORDER BY timestamp DESC")
     fun getAllTransactions(): Flow<List<TransactionEntity>>
 
+    @Query("SELECT EXISTS(SELECT 1 FROM transactions WHERE category != 'TRANSFER' COLLATE NOCASE LIMIT 1)")
+    fun hasNonTransferTransactions(): Flow<Boolean>
+
     @Query("SELECT * FROM transactions ORDER BY timestamp DESC LIMIT :limit")
     fun getRecentTransactions(limit: Int): Flow<List<TransactionEntity>>
 

@@ -58,13 +58,13 @@ class GetDashboardDataUseCaseTest {
 
     private fun stub(
         transactions: List<TransactionEntity>,
-        allTransactions: List<TransactionEntity> = transactions,
+        hasNonTransferTransactions: Boolean = transactions.any { !it.category.equals("TRANSFER", ignoreCase = true) },
         rangeIncome: Double = 0.0,
         rangeExpense: Double = 0.0,
         prevExpense: Double? = null
     ) {
         whenever(repository.getTransactionsBetween(timeRange.startTime, timeRange.endTime)).thenReturn(flowOf(transactions))
-        whenever(repository.getAllTransactions()).thenReturn(flowOf(allTransactions))
+        whenever(repository.hasNonTransferTransactions()).thenReturn(flowOf(hasNonTransferTransactions))
         whenever(repository.getTotalIncomeBetween(timeRange.startTime, timeRange.endTime)).thenReturn(flowOf(rangeIncome))
         whenever(repository.getTotalExpensesBetween(timeRange.startTime, timeRange.endTime)).thenReturn(flowOf(rangeExpense))
         whenever(repository.getTotalExpensesBetween(previousRange.startTime, previousRange.endTime)).thenReturn(flowOf(prevExpense))
@@ -183,7 +183,7 @@ class GetDashboardDataUseCaseTest {
 
     @Test
     fun `has any transactions is true when the full ledger is non empty even if range is filtered empty`() {
-        stub(transactions = emptyList(), allTransactions = listOf(tx(10.0, "A", "FOOD")))
+        stub(transactions = emptyList(), hasNonTransferTransactions = true)
 
         val state = invoke()
 
@@ -193,7 +193,7 @@ class GetDashboardDataUseCaseTest {
 
     @Test
     fun `has any transactions is false when the ledger is completely empty`() {
-        stub(transactions = emptyList(), allTransactions = emptyList())
+        stub(transactions = emptyList(), hasNonTransferTransactions = false)
 
         val state = invoke()
 
@@ -261,7 +261,7 @@ class GetDashboardDataUseCaseTest {
     fun `transfers are completely excluded from dashboard timeline`() {
         val transferTx = tx(2000.0, "Transfer to Savings", "TRANSFER", isIncome = false)
         val normalTx = tx(100.0, "Coffee", "FOOD", isIncome = false)
-        stub(listOf(transferTx, normalTx), allTransactions = listOf(transferTx, normalTx))
+        stub(listOf(transferTx, normalTx), hasNonTransferTransactions = true)
 
         val state = invoke()
 
