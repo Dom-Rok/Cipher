@@ -32,18 +32,33 @@ class TransactionNotificationService : NotificationListenerService() {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
+    @Volatile
+    private var cachedTrackedApps: Set<String> = emptySet()
+
+    @Volatile
+    private var cachedCurrencyCode: String = "INR"
+
     override fun onCreate() {
         super.onCreate()
         val filter = android.content.IntentFilter(android.content.Intent.ACTION_PACKAGE_ADDED).apply {
             addDataScheme("package")
         }
         registerReceiver(packageInstallReceiver, filter)
+        serviceScope.launch {
+            userPreferences.settingsFlow.collect { settings ->
+                cachedTrackedApps = settings.trackedApps
+                cachedCurrencyCode = settings.currencyCode
+            }
+        }
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification) {
-        val packageName = sbn.packageName
-        val notification = sbn.notification
-        val extras = notification.extras
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        if (sbn == null) return
+        val packageName = sbn.packageName ?: return
+        if (!cachedTrackedApps.contains(packageName)) return
+
+        val notification = sbn.notification ?: return
+        val extras = notification.extras ?: return
 
         val title = extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString().orEmpty()
@@ -61,12 +76,9 @@ class TransactionNotificationService : NotificationListenerService() {
             .trim()
         if (fullMessage.isBlank()) return
 
+        val currencyCode = cachedCurrencyCode
         serviceScope.launch {
-            val settings = userPreferences.settingsFlow.first()
-            val trackedApps = settings.trackedApps
-            if (!trackedApps.contains(packageName)) return@launch
-
-            val parsedTx = transactionParser.parse(fullMessage, settings.currencyCode)
+            val parsedTx = transactionParser.parse(fullMessage, currencyCode)
             if (parsedTx != null) {
                 val appLabel = try {
                     val pm = packageManager
