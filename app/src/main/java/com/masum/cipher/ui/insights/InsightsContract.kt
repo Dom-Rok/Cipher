@@ -1,5 +1,6 @@
 package com.masum.cipher.ui.insights
 
+import androidx.compose.runtime.Immutable
 import com.masum.cipher.core.data.local.entity.TransactionEntity
 import com.masum.cipher.core.domain.SubscriptionDetector
 import com.masum.cipher.core.domain.model.MerchantRenameRulePrompt
@@ -33,11 +34,16 @@ class InsightsContract {
         data class DeleteCustomCategory(val category: com.masum.cipher.core.data.local.entity.CustomCategoryEntity) : Intent()
     }
 
+    @Immutable
     data class MerchantData(val merchant: String, val amount: Double, val count: Int)
+    @Immutable
     data class MonthlySummary(val income: Double, val expense: Double, val savingsRate: Float)
+    @Immutable
     data class DayOfWeekData(val dayName: String, val amount: Double, val isMax: Boolean)
+    @Immutable
     data class PeakHourData(val label: String, val amount: Double, val percentage: Float)
 
+    @Immutable
     data class State(
         val isLoading: Boolean = true,
         val currencyCode: String = com.masum.cipher.core.domain.model.AppCurrency.detectDefault().code,

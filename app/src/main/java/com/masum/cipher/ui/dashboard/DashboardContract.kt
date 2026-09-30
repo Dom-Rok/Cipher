@@ -1,5 +1,6 @@
 package com.masum.cipher.ui.dashboard
 
+import androidx.compose.runtime.Immutable
 import com.masum.cipher.core.data.local.entity.TransactionEntity
 import com.masum.cipher.core.domain.model.MerchantRenameRulePrompt
 import com.masum.cipher.core.mvi.UiEffect
@@ -40,6 +41,7 @@ class DashboardContract {
 
     enum class FilterType { ALL, INCOME, EXPENSE }
 
+    @Immutable
     data class State(
         val isLoading: Boolean = true,
         val transactions: ImmutableList<TransactionEntity> = persistentListOf(),

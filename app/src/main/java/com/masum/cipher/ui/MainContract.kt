@@ -1,5 +1,6 @@
 package com.masum.cipher.ui
 
+import androidx.compose.runtime.Immutable
 import com.masum.cipher.core.data.local.pref.UserSettings
 import com.masum.cipher.core.mvi.UiEffect
 import com.masum.cipher.core.mvi.UiIntent
@@ -23,6 +24,7 @@ class MainContract {
         object DismissLicenseRevokedDialog : Intent()
     }
 
+    @Immutable
     data class State(
         val settings: UserSettings? = null,
         val isAuthenticated: Boolean = false,

@@ -1,6 +1,7 @@
 package com.masum.cipher.ui.settings
 
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import com.masum.cipher.core.data.local.pref.AppTheme
 import com.masum.cipher.core.mvi.UiEffect
 import com.masum.cipher.core.mvi.UiIntent
@@ -76,6 +77,7 @@ class SettingsContract {
         data class SetShowProBadge(val enabled: Boolean) : Intent()
     }
 
+    @Immutable
     data class State(
         val theme: AppTheme = AppTheme.SYSTEM,
         val accentColor: com.masum.cipher.core.data.local.pref.AccentColor = com.masum.cipher.core.data.local.pref.AccentColor.INDIGO,

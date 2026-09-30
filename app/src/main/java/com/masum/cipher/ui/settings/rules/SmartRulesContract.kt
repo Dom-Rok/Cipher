@@ -1,5 +1,6 @@
 package com.masum.cipher.ui.settings.rules
 
+import androidx.compose.runtime.Immutable
 import com.masum.cipher.core.data.local.entity.CategoryRuleEntity
 import com.masum.cipher.core.data.local.entity.MerchantAliasEntity
 import com.masum.cipher.core.mvi.UiEffect
@@ -23,6 +24,7 @@ class SmartRulesContract {
         object DismissProGate : Intent()
     }
 
+    @Immutable
     data class State(
         val isLoading: Boolean = true,
         val categoryRules: List<CategoryRuleEntity> = emptyList(),

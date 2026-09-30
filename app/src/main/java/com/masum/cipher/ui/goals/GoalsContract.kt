@@ -1,8 +1,10 @@
 package com.masum.cipher.ui.goals
 
+import androidx.compose.runtime.Immutable
 import com.masum.cipher.core.data.local.entity.GoalEntity
 
 object GoalsContract {
+    @Immutable
     data class State(
         val goals: List<GoalEntity> = emptyList(),
         val totalSaved: Double = 0.0,

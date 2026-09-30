@@ -1,6 +1,7 @@
 package com.masum.cipher.ui.accounts.analytics
 
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Immutable
 import com.masum.cipher.R
 import com.masum.cipher.core.data.local.entity.AccountEntity
 import com.masum.cipher.core.data.local.entity.CustomCategoryEntity
@@ -21,6 +22,7 @@ enum class AccountAnalyticsPeriod(@StringRes val labelRes: Int) {
     ALL(R.string.account_analytics_period_all)
 }
 
+@Immutable
 data class SpendingVelocityData(
     val avgDailySpend: Double = 0.0,
     val avgWeeklySpend: Double = 0.0,
@@ -28,6 +30,7 @@ data class SpendingVelocityData(
     val largestOutflow: Double = 0.0
 )
 
+@Immutable
 data class WeekdaySpendData(
     val dayName: String,
     val amount: Double,
@@ -37,6 +40,7 @@ data class WeekdaySpendData(
 
 object AccountAnalyticsContract {
 
+    @Immutable
     data class State(
         val account: AccountEntity? = null,
         val accountItem: AccountItem? = null,

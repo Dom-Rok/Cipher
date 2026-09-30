@@ -1,5 +1,6 @@
 package com.masum.cipher.ui.accounts
 
+import androidx.compose.runtime.Immutable
 import com.masum.cipher.core.data.local.entity.AccountEntity
 import com.masum.cipher.core.domain.model.AccountItem
 import com.masum.cipher.core.mvi.UiEffect
@@ -10,6 +11,7 @@ import kotlinx.collections.immutable.persistentListOf
 
 object AccountsContract {
 
+    @Immutable
     data class State(
         val accounts: ImmutableList<AccountItem> = persistentListOf(),
         val totalNetWorth: Double = 0.0,

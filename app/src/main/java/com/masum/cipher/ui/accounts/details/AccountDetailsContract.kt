@@ -1,6 +1,7 @@
 package com.masum.cipher.ui.accounts.details
 
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Immutable
 import com.masum.cipher.R
 import com.masum.cipher.core.data.local.entity.AccountEntity
 import com.masum.cipher.core.data.local.entity.CustomCategoryEntity
@@ -21,6 +22,7 @@ enum class AccountTransactionFilter(@StringRes val labelRes: Int) {
     TRANSFER(R.string.account_details_filter_transfer)
 }
 
+@Immutable
 data class GroupedDayTransactions(
     val title: String,
     val netTotal: Double,
@@ -29,6 +31,7 @@ data class GroupedDayTransactions(
 
 object AccountDetailsContract {
 
+    @Immutable
     data class State(
         val account: AccountEntity? = null,
         val accountItem: AccountItem? = null,
