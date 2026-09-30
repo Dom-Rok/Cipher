@@ -567,4 +567,22 @@ class TransactionParserTest {
         assertEquals("MR GUNJAN RAJBANSHI", result.merchant)
         assertTrue(result.isIncome)
     }
+
+    @Test
+    fun `Google Pay received payment notification parse`() {
+        val result = parser.parse("Rahul Sharma sent you ₹500.00 on Google Pay")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+        assertEquals("RAHUL SHARMA", result.merchant)
+        assertTrue(result.isIncome)
+    }
+
+    @Test
+    fun `Paytm received simple notification parse`() {
+        val result = parser.parse("Received ₹500 from Rahul Sharma on Paytm")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+        assertEquals("RAHUL SHARMA", result.merchant)
+        assertTrue(result.isIncome)
+    }
 }

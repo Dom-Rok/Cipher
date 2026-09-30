@@ -132,7 +132,20 @@ fun AppSelectionScreen(
             withContext(Dispatchers.Main) {
                 installedApps = apps
                 val installedPackageNames = apps.map { it.packageName }.toSet()
-                selectedApps = selectedApps.intersect(installedPackageNames)
+                selectedApps = if (initialSelectedApps.isEmpty()) {
+                    val financeKeywords = listOf(
+                        "pay", "bank", "upi", "finance", "money", "wallet", "cash", "crypto",
+                        "trade", "cred", "gpay", "phonepe", "paytm", "slice", "jupiter", "fi",
+                        "amazon", "mobikwik", "freecharge", "bhim", "groww", "zerodha", "navi"
+                    )
+                    apps.filter { app ->
+                        val lowerPkg = app.packageName.lowercase()
+                        val lowerName = app.appName.lowercase()
+                        financeKeywords.any { lowerPkg.contains(it) || lowerName.contains(it) }
+                    }.map { it.packageName }.toSet()
+                } else {
+                    selectedApps.intersect(installedPackageNames)
+                }
                 isLoading = false
             }
         }
