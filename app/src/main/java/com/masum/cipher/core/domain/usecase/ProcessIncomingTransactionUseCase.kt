@@ -97,10 +97,24 @@ class ProcessIncomingTransactionUseCase @Inject constructor(
         val isInternalTransfer = detectInternalTransfer(rawMessage, finalMerchant, accounts) ||
             (hasTransferKeyword(rawMessage) && (otherOwnAccount != null || mentionsSavingsAccount(rawMessage)))
         val transferCounterpart = findTransferCounterpart(transaction, resolvedAccountId)
-        val effectiveCategory = if (isInternalTransfer || transferCounterpart != null) TRANSFER_CATEGORY else finalCategory
+        // If this side was already filled in automatically from the other notification, take its place
+        val autoAddedSide = findAutoAddedSide(transaction, resolvedAccountId)
+        val effectiveCategory = if (isInternalTransfer || transferCounterpart != null || autoAddedSide != null) {
+            TRANSFER_CATEGORY
+        } else {
+            finalCategory
+        }
+        val otherTransferAccount = if (isInternalTransfer && resolvedAccountId != null) {
+            otherOwnAccount
+                ?: accounts.firstOrNull { it.id != resolvedAccountId && it.name.trim().equals(finalMerchant.trim(), ignoreCase = true) }
+                ?: soleSavingsAccount(rawMessage, resolvedAccountId, accounts)
+        } else {
+            null
+        }
 
         val newTx = transaction.copy(
-            merchant = if (isInternalTransfer && otherOwnAccount != null) otherOwnAccount.name else finalMerchant,
+            id = autoAddedSide?.id ?: transaction.id,
+            merchant = otherTransferAccount?.name ?: finalMerchant,
             category = effectiveCategory,
             accountId = resolvedAccountId
         )
@@ -109,6 +123,25 @@ class ProcessIncomingTransactionUseCase @Inject constructor(
 
         if (transferCounterpart != null && !transferCounterpart.category.equals(TRANSFER_CATEGORY, ignoreCase = true)) {
             transactionDao.updateCategory(transferCounterpart.id, TRANSFER_CATEGORY)
+        }
+
+        // Banks often notify only the account the money landed in (or left). Record the other
+        // side on the user's other account too, so both balances move, unless it already exists.
+        if (otherTransferAccount != null && transferCounterpart == null && autoAddedSide == null) {
+            val resolvedAccountName = accounts.firstOrNull { it.id == resolvedAccountId }?.name ?: finalMerchant
+            transactionDao.insertTransaction(
+                TransactionEntity(
+                    amount = savedTx.amount,
+                    merchant = resolvedAccountName,
+                    currency = savedTx.currency,
+                    timestamp = savedTx.timestamp + 1,
+                    category = TRANSFER_CATEGORY,
+                    rawSms = null,
+                    isIncome = !savedTx.isIncome,
+                    note = AUTO_ADDED_SIDE_NOTE,
+                    accountId = otherTransferAccount.id
+                )
+            )
         }
 
         onSyncWidget?.invoke() ?: widgetSyncManager?.syncWidget()
@@ -149,6 +182,7 @@ class ProcessIncomingTransactionUseCase @Inject constructor(
     companion object {
         private const val TRANSFER_CATEGORY = "TRANSFER"
         private const val TRANSFER_PAIR_WINDOW_MS = 10 * 60_000L
+        internal const val AUTO_ADDED_SIDE_NOTE = "Auto-added: other side of a transfer"
         private val TRANSFER_KEYWORDS = listOf(
             "pripísanie", "prípísanie", "internal transfer", "account to account", "transfer between",
             "vklad", "prevod", "transferred", "between accounts"
@@ -159,6 +193,25 @@ class ProcessIncomingTransactionUseCase @Inject constructor(
 
         // Masked IBAN such as "SK*5600*18841*001": the last group identifies the account
         private val MASKED_ACCOUNT_PATTERN = java.util.regex.Pattern.compile("(?i)\\b[A-Z]{2}\\d{0,2}(?:\\*\\d+)+\\*(\\d{3,4})\\b")
+    }
+
+    // When the message only says "savings account" without a number the app knows, use the
+    // user's savings account if they have exactly one.
+    private fun soleSavingsAccount(rawMessage: String, resolvedAccountId: Long, accounts: List<AccountEntity>): AccountEntity? {
+        if (!mentionsSavingsAccount(rawMessage)) return null
+        return accounts.filter { it.id != resolvedAccountId && it.type == "SAVINGS" }.singleOrNull()
+    }
+
+    // An entry this use case added for the other side of a transfer, which a real notification
+    // for that side should replace instead of being counted twice.
+    private suspend fun findAutoAddedSide(transaction: TransactionEntity, accountId: Long?): TransactionEntity? {
+        if (transaction.rawSms == null || accountId == null) return null
+        return transactionDao.findByAmountBetween(
+            transaction.amount,
+            transaction.isIncome,
+            transaction.timestamp - TRANSFER_PAIR_WINDOW_MS,
+            transaction.timestamp + TRANSFER_PAIR_WINDOW_MS
+        ).firstOrNull { it.accountId == accountId && it.note == AUTO_ADDED_SIDE_NOTE }
     }
 
     private fun mentionsSavingsAccount(rawMessage: String): Boolean {

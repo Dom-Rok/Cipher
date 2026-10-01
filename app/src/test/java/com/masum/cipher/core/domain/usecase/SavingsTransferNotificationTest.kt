@@ -33,17 +33,22 @@ class SavingsTransferNotificationTest {
 
     private val accounts = mutableListOf<AccountEntity>()
     private val saved = mutableListOf<TransactionEntity>()
+    private val fromNotifications get() = saved.filter { it.note != ProcessIncomingTransactionUseCase.AUTO_ADDED_SIDE_NOTE }
+    private val autoAdded get() = saved.filter { it.note == ProcessIncomingTransactionUseCase.AUTO_ADDED_SIDE_NOTE }
     private val parser = TransactionParser()
+
+    private fun balanceOf(account: AccountEntity) =
+        saved.filter { it.accountId == account.id }.sumOf { if (it.isIncome) it.amount else -it.amount }
     private lateinit var useCase: ProcessIncomingTransactionUseCase
 
     // One bank account, two numbers: card …3677 (card payments) and IBAN …001 (transfers)
     private val current = AccountEntity(id = 1, name = "Bežný účet", type = "BANK", accountNumberLast4 = "3677, 001", isDefault = true)
     private val primaSavings = AccountEntity(id = 2, name = "Odkladací účet", type = "SAVINGS", accountNumberLast4 = "021")
-    private val revolutSavings = AccountEntity(id = 3, name = "Revolut", type = "SAVINGS")
+    private val revolut = AccountEntity(id = 3, name = "Revolut", type = "WALLET")
 
     @Before
     fun setup() {
-        accounts += listOf(current, primaSavings, revolutSavings)
+        accounts += listOf(current, primaSavings, revolut)
         useCase = ProcessIncomingTransactionUseCase(
             transactionDao(), merchantAliasDao(), categoryRuleDao(), accountDao(),
             CategorizerEngine(), null, null, null
@@ -97,12 +102,62 @@ class SavingsTransferNotificationTest {
     fun `money from savings to main account in the same bank is an incoming transfer`() = runBlocking {
         postNotification("Wallet", savingsToMainTitle, savingsToMainText, timestamp = 1_000_000L)
 
-        val moneyIn = saved.single()
+        val moneyIn = fromNotifications.single()
         assertEquals(7.0, moneyIn.amount, 0.001)
         assertTrue(moneyIn.isIncome)
         assertEquals(current.id, moneyIn.accountId)
         assertEquals("TRANSFER", moneyIn.category)
         assertEquals("Odkladací účet", moneyIn.merchant)
+
+        // Only the main account was notified, so the savings side is added automatically
+        val moneyOutOfSavings = autoAdded.single()
+        assertEquals(7.0, moneyOutOfSavings.amount, 0.001)
+        assertFalse(moneyOutOfSavings.isIncome)
+        assertEquals(primaSavings.id, moneyOutOfSavings.accountId)
+        assertEquals("TRANSFER", moneyOutOfSavings.category)
+        assertEquals("Bežný účet", moneyOutOfSavings.merchant)
+        assertEquals(7.0, balanceOf(current), 0.001)
+        assertEquals(-7.0, balanceOf(primaSavings), 0.001)
+    }
+
+    @Test
+    fun `a later notification for the savings side replaces the auto-added entry`() = runBlocking {
+        postNotification("Wallet", savingsToMainTitle, savingsToMainText, timestamp = 1_000_000L)
+        // In case the bank starts notifying the savings account as well
+        postNotification(
+            "Wallet",
+            "Odpísanie sumy: 7,00 EUR",
+            "Z účtu SK*5600*18841*021 bola odpísaná suma 7,00 EUR, Prevod na účet SK*5600*18841*001, " +
+                "DISPO: 93,24 EUR (93,24 EUR), dňa: 01.10.2026 09:35:04",
+            timestamp = 1_003_000L
+        )
+
+        assertEquals(2, saved.size)
+        assertTrue(autoAdded.isEmpty())
+        val savingsSide = saved.single { it.accountId == primaSavings.id }
+        assertFalse(savingsSide.isIncome)
+        assertEquals("TRANSFER", savingsSide.category)
+        assertNotNull(savingsSide.rawSms)
+        assertEquals(7.0, balanceOf(current), 0.001)
+        assertEquals(-7.0, balanceOf(primaSavings), 0.001)
+    }
+
+    @Test
+    fun `when the savings side is notified first nothing is added twice`() = runBlocking {
+        postNotification(
+            "Wallet",
+            "Odpísanie sumy: 7,00 EUR",
+            "Z účtu SK*5600*18841*021 bola odpísaná suma 7,00 EUR, Prevod na účet SK*5600*18841*001, " +
+                "DISPO: 93,24 EUR (93,24 EUR), dňa: 01.10.2026 09:35:04",
+            timestamp = 1_000_000L
+        )
+        postNotification("Wallet", savingsToMainTitle, savingsToMainText, timestamp = 1_002_000L)
+
+        assertEquals(2, saved.size)
+        assertTrue(autoAdded.isEmpty())
+        saved.forEach { assertEquals("TRANSFER", it.category) }
+        assertEquals(7.0, balanceOf(current), 0.001)
+        assertEquals(-7.0, balanceOf(primaSavings), 0.001)
     }
 
     @Test
@@ -118,8 +173,8 @@ class SavingsTransferNotificationTest {
         )
         postNotification("Wallet", savingsToMainTitle, savingsToMainText, timestamp = 1_000_000L)
 
-        assertEquals(2, saved.size)
-        val (cardPayment, moneyIn) = saved
+        assertEquals(2, fromNotifications.size)
+        val (cardPayment, moneyIn) = fromNotifications
         assertEquals(current.id, cardPayment.accountId)
         assertNotEquals("TRANSFER", cardPayment.category)
         assertEquals(current.id, moneyIn.accountId)
@@ -132,10 +187,14 @@ class SavingsTransferNotificationTest {
 
         postNotification("Wallet", savingsToMainTitle, savingsToMainText, timestamp = 1_000_000L)
 
-        val moneyIn = saved.single()
+        val moneyIn = fromNotifications.single()
         assertEquals(7.0, moneyIn.amount, 0.001)
         assertTrue(moneyIn.isIncome)
         assertEquals("TRANSFER", moneyIn.category)
+
+        // "Odkladací účet" in the text points at the user's only savings-type account
+        assertEquals(primaSavings.id, autoAdded.single().accountId)
+        assertFalse(autoAdded.single().isIncome)
     }
 
     @Test
@@ -149,12 +208,18 @@ class SavingsTransferNotificationTest {
             timestamp = 1_000_000L
         )
 
-        val moneyOut = saved.single()
+        val moneyOut = fromNotifications.single()
         assertEquals(100.0, moneyOut.amount, 0.001)
         assertFalse(moneyOut.isIncome)
         assertEquals(current.id, moneyOut.accountId)
         assertEquals("TRANSFER", moneyOut.category)
         assertEquals("Odkladací účet", moneyOut.merchant)
+
+        val moneyIntoSavings = autoAdded.single()
+        assertTrue(moneyIntoSavings.isIncome)
+        assertEquals(primaSavings.id, moneyIntoSavings.accountId)
+        assertEquals(-100.0, balanceOf(current), 0.001)
+        assertEquals(100.0, balanceOf(primaSavings), 0.001)
     }
 
     @Test
@@ -168,7 +233,7 @@ class SavingsTransferNotificationTest {
                 "DISPO: 20,00 EUR (20,00 EUR), dňa: 01.10.2026 09:00:00",
             timestamp = 2_000_000L
         )
-        assertNotEquals("TRANSFER", saved.single().category)
+        assertNotEquals("TRANSFER", fromNotifications.single().category)
 
         postNotification(
             "Revolut",
@@ -177,8 +242,8 @@ class SavingsTransferNotificationTest {
             timestamp = 2_045_000L
         )
 
-        assertEquals(2, saved.size)
-        val (moneyOut, moneyIn) = saved
+        assertEquals(2, fromNotifications.size)
+        val (moneyOut, moneyIn) = fromNotifications
 
         assertEquals(200.0, moneyOut.amount, 0.001)
         assertFalse(moneyOut.isIncome)
@@ -187,7 +252,8 @@ class SavingsTransferNotificationTest {
 
         assertEquals(200.0, moneyIn.amount, 0.001)
         assertTrue(moneyIn.isIncome)
-        assertEquals(revolutSavings.id, moneyIn.accountId)
+        assertEquals(revolut.id, moneyIn.accountId)
+        assertTrue(autoAdded.isEmpty())
         assertEquals("TRANSFER", moneyIn.category)
     }
 
@@ -206,8 +272,9 @@ class SavingsTransferNotificationTest {
             timestamp = 3_060_000L
         )
 
-        assertEquals(2, saved.size)
-        saved.forEach { assertNotEquals("TRANSFER", it.category) }
+        assertEquals(2, fromNotifications.size)
+        fromNotifications.forEach { assertNotEquals("TRANSFER", it.category) }
+        assertTrue(autoAdded.isEmpty())
     }
 
     private fun transactionDao(): TransactionDao = Proxy.newProxyInstance(
@@ -227,9 +294,17 @@ class SavingsTransferNotificationTest {
                     it.timestamp in (args[2] as Long)..(args[3] as Long)
             }
             "insertTransaction" -> {
-                val id = (saved.size + 1).toLong()
-                saved += (args[0] as TransactionEntity).copy(id = id)
-                id
+                // OnConflictStrategy.REPLACE: an existing id is overwritten
+                val tx = args[0] as TransactionEntity
+                val existing = saved.indexOfFirst { tx.id != 0L && it.id == tx.id }
+                if (existing >= 0) {
+                    saved[existing] = tx
+                    tx.id
+                } else {
+                    val id = (saved.maxOfOrNull { it.id } ?: 0L) + 1
+                    saved += tx.copy(id = id)
+                    id
+                }
             }
             "updateCategory" -> {
                 val index = saved.indexOfFirst { it.id == args[0] as Long }
