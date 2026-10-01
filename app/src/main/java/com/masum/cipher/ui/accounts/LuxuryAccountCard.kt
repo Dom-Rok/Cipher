@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.masum.cipher.R
+import com.masum.cipher.core.domain.model.AccountNumbers
 import com.masum.cipher.core.domain.model.AccountType
 import com.masum.cipher.core.util.AppFormatters
 import com.masum.cipher.core.util.performVibrate
@@ -74,7 +75,7 @@ fun LuxuryAccountCard(
     val view = LocalView.current
     val baseColor = Color(colorHex)
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val formattedLast4 = if (!last4.isNullOrBlank()) last4.takeLast(4) else "••••"
+    val formattedLast4 = AccountNumbers.primary(last4) ?: "••••"
 
     val isDebtAccount = type == AccountType.CREDIT_CARD
     val formattedBalance = AppFormatters.formatCurrency(balance, currencySymbol, locale, decimals = 2)

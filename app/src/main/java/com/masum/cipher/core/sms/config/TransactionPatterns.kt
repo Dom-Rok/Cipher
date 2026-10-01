@@ -7,7 +7,8 @@ object TransactionPatterns {
         "(?i)(?:a/c|acc|account|ending|no|id|ref)\\s*(?:no\\.?)?\\s*[:#-]?\\s*\\d+"
     )
 
-    val DEBIT_KEYWORDS: List<String> = listOf("debited", "spent", "withdrawn", "charged", "deducted")
-    val CREDIT_KEYWORDS: List<String> = listOf("credited", "deposited", "refunded", "incoming", "cashback", "salary", "received", "paid you", "sent you", "transferred you", "payment from", "received from")
+    val DEBIT_KEYWORDS: List<String> = listOf("debited", "spent", "withdrawn", "charged", "deducted", "odpísan", "odpisan")
+    val CREDIT_KEYWORDS: List<String> = listOf("credited", "deposited", "refunded", "incoming", "cashback", "salary", "received", "paid you", "sent you", "transferred you", "payment from", "received from",
+        "pripísan", "prípísan", "pripisan", "prijatá", "prijata", "vklad")
     val MERCHANT_FALSE_POSITIVE_PREFIXES: List<String> = listOf("your", "a/c", "account", "bank", "the ", "my ")
 }

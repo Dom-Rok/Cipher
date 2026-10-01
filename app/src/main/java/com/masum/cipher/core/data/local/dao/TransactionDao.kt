@@ -62,6 +62,12 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE amount = :amount AND isIncome = :isIncome AND merchant = :merchant COLLATE NOCASE AND timestamp BETWEEN :startTime AND :endTime LIMIT 1")
     suspend fun findDuplicate(amount: Double, isIncome: Boolean, merchant: String, startTime: Long, endTime: Long): TransactionEntity?
 
+    @Query("SELECT * FROM transactions WHERE amount = :amount AND isIncome = :isIncome AND timestamp BETWEEN :startTime AND :endTime ORDER BY timestamp DESC")
+    suspend fun findByAmountBetween(amount: Double, isIncome: Boolean, startTime: Long, endTime: Long): List<TransactionEntity>
+
+    @Query("UPDATE transactions SET category = :category WHERE id = :id")
+    suspend fun updateCategory(id: Long, category: String)
+
     @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE isIncome = 0 AND category != 'TRANSFER' COLLATE NOCASE AND timestamp >= :startTime")
     suspend fun sumExpensesSince(startTime: Long): Double
 

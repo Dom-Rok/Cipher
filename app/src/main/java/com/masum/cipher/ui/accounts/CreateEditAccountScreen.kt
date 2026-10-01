@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.masum.cipher.R
 import com.masum.cipher.core.data.local.entity.AccountEntity
+import com.masum.cipher.core.domain.model.AccountNumbers
 import com.masum.cipher.core.domain.model.AccountType
 import com.masum.cipher.core.util.AppFormatters
 import com.masum.cipher.core.util.performVibrate
@@ -201,7 +202,7 @@ fun CreateEditAccountScreen(
                     onClick = {
                         view.performVibrate(isHapticsEnabled, isLongPress = true)
                         val finalName = name.trim().ifBlank { defaultAccountName }
-                        val finalLast4 = last4Input.trim().take(4).ifBlank { null }
+                        val finalLast4 = AccountNumbers.normalize(last4Input)
                         onSaveAccount(
                             finalName,
                             selectedType.key,
@@ -574,7 +575,8 @@ fun CreateEditAccountScreen(
                 BasicTextField(
                     value = last4Input,
                     onValueChange = { input ->
-                        if (input.length <= 4 && input.all { it.isDigit() }) {
+                        // Several numbers allowed, e.g. card and account: "3677, 001"
+                        if (input.length <= 24 && input.all { it.isDigit() || it == ',' || it == ' ' }) {
                             last4Input = input
                         }
                     },
@@ -586,7 +588,7 @@ fun CreateEditAccountScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     ),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -894,7 +896,7 @@ fun CreateEditAccountScreen(
                 onClick = {
                     view.performVibrate(isHapticsEnabled, isLongPress = true)
                     val finalName = name.trim().ifBlank { defaultAccountName }
-                    val finalLast4 = last4Input.trim().take(4).ifBlank { null }
+                    val finalLast4 = AccountNumbers.normalize(last4Input)
                     onSaveAccount(
                         finalName,
                         selectedType.key,

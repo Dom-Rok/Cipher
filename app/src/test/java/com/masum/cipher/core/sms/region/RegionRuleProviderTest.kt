@@ -66,8 +66,8 @@ class RegionRuleProviderTest {
     fun `getAllRules for an unmapped currency returns the full region chain starting with global fallback`() {
         val chain = RegionRuleProvider.getAllRules("JPY")
         assertEquals(GlobalFallbackRules, chain.first())
-        assertTrue(chain.containsAll(listOf(UsParserRules, EuroParserRules, UkParserRules, IndiaParserRules, CanadaParserRules, AustraliaParserRules, UaeParserRules, SingaporeParserRules)))
-        assertEquals(9, chain.size)
+        assertTrue(chain.containsAll(listOf(UsParserRules, EuroParserRules, UkParserRules, IndiaParserRules, CanadaParserRules, AustraliaParserRules, UaeParserRules, SingaporeParserRules, SlovakParserRules)))
+        assertEquals(10, chain.size)
     }
 
     @Test

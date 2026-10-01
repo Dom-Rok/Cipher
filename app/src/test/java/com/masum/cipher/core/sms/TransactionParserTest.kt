@@ -585,4 +585,58 @@ class TransactionParserTest {
         assertEquals("RAHUL SHARMA", result.merchant)
         assertTrue(result.isIncome)
     }
+
+    // ─── REGRESSION TESTS: EXISTING PARSERS WITH SLOVAK RULES ADDED ──────
+
+    @Test
+    fun `US parser still works correctly with Slovak rules in chain`() {
+        val result = parser.parse("You spent \$45.99 at WALMART using card ending 1234.", preferredCurrency = "USD")
+        assertNotNull(result)
+        assertEquals(45.99, result!!.amount, 0.001)
+        assertEquals("WALMART", result.merchant)
+        assertEquals("USD", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `India parser still works correctly with Slovak rules in chain`() {
+        val result = parser.parse("Debited for purchase of Rs. 500.00 at FLIPKART using card ending 1234.", preferredCurrency = "INR")
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.001)
+        assertEquals("FLIPKART", result.merchant)
+        assertEquals("INR", result.currency)
+        assertTrue(!result.isIncome)
+    }
+
+    @Test
+    fun `EU parser still works correctly with Slovak rules in chain`() {
+        val result = parser.parse("€45.99 spent at CARREFOUR on your card ending 1234.", preferredCurrency = "EUR")
+        assertNotNull(result)
+        assertEquals(45.99, result!!.amount, 0.001)
+        assertEquals("EUR", result.currency)
+    }
+
+    @Test
+    fun `UK parser still works correctly`() {
+        val result = parser.parse("Payment of £50.00 at BOOTS using card ending 1234.", preferredCurrency = "GBP")
+        assertNotNull(result)
+        assertEquals(50.0, result!!.amount, 0.001)
+        assertEquals("GBP", result.currency)
+    }
+
+    @Test
+    fun `Slovakia EUR currency uses Slovak parser first, then falls back to Euro rules`() {
+        val sms = "Platba kartou: 23,70 EUR v LIDL"
+        val result = parser.parse(sms, preferredCurrency = "EUR")
+        assertNotNull(result)
+        assertEquals(23.70, result!!.amount, 0.001)
+        assertEquals("EUR", result.currency)
+    }
+
+    @Test
+    fun `global fallback rules still work for unmapped currency`() {
+        val result = parser.parse("Payment of 100.00 XYZ at some merchant", preferredCurrency = "XYZ")
+        assertNotNull(result)
+        assertEquals(100.0, result!!.amount, 0.001)
+    }
 }

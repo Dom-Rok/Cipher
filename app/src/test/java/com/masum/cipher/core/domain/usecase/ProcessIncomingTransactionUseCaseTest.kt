@@ -334,6 +334,7 @@ class ProcessIncomingTransactionUseCaseTest {
                         insertedTransactions.add(tx.copy(id = id))
                         id
                     }
+                    "findByAmountBetween" -> emptyList<TransactionEntity>()
                     "sumExpensesSince" -> 0.0
                     "sumIncomeSince" -> 0.0
                     "getUncategorizedCount" -> 0
@@ -416,5 +417,124 @@ class ProcessIncomingTransactionUseCaseTest {
                 }
             } as AccountDao
         }
+    }
+
+    // ────── TRANSFER DETECTION INTEGRATION TESTS ──────
+
+    @Test
+    fun internalTransferIsCategorizedAsTransfer() = runBlocking {
+        val savingsAccount = AccountEntity(
+            id = 1001L,
+            name = "Savings Account",
+            type = "BANK",
+            accountNumberLast4 = "1001",
+            isDefault = false
+        )
+        fakeAccountDao.accounts.add(savingsAccount)
+
+        val incoming = TransactionEntity(
+            amount = 50.0,
+            merchant = "Savings Account",
+            currency = "EUR",
+            timestamp = 1_000_000L,
+            category = "",
+            rawSms = "Prípísanie sumy: 50,00 EUR z Savings Account",
+            isIncome = true
+        )
+
+        val result = useCase(incoming)
+        assertNotNull(result)
+        assertEquals("TRANSFER", result!!.category)
+    }
+
+    @Test
+    fun externalIncomeIsNotCategorizedAsTransfer() = runBlocking {
+        val mainAccount = AccountEntity(
+            id = 1002L,
+            name = "Main Account",
+            type = "CREDIT_CARD",
+            accountNumberLast4 = "1234",
+            isDefault = true
+        )
+        fakeAccountDao.accounts.add(mainAccount)
+
+        val incoming = TransactionEntity(
+            amount = 100.0,
+            merchant = "External Bank",
+            currency = "EUR",
+            timestamp = 1_100_000L,
+            category = "",
+            rawSms = "You received 100.00 EUR from External Bank",
+            isIncome = true
+        )
+
+        val result = useCase(incoming)
+        assertNotNull(result)
+        assertNull(result?.category.takeIf { it == "TRANSFER" })
+    }
+
+    @Test
+    fun duplicateDetectionWorksWithTransferTransactions() = runBlocking {
+        val account = AccountEntity(
+            id = 1003L,
+            name = "Account",
+            type = "BANK",
+            accountNumberLast4 = "1001",
+            isDefault = true
+        )
+        fakeAccountDao.accounts.add(account)
+
+        val transaction1 = TransactionEntity(
+            amount = 50.0,
+            merchant = "Account",
+            currency = "EUR",
+            timestamp = 1_200_000L,
+            category = "",
+            rawSms = "Prípísanie sumy: 50,00 EUR z Account",
+            isIncome = true
+        )
+
+        val result1 = useCase(transaction1)
+        assertNotNull(result1)
+
+        val transaction2 = TransactionEntity(
+            amount = 50.0,
+            merchant = "Account",
+            currency = "EUR",
+            timestamp = 1_200_000L + 30000,
+            category = "",
+            rawSms = "Prípísanie sumy: 50,00 EUR z Account",
+            isIncome = true
+        )
+
+        fakeTransactionDao.duplicateReturn = result1
+        val result2 = useCase(transaction2)
+        assertNull(result2)
+    }
+
+    @Test
+    fun accountMatchingStillWorksWithTransferTransactions() = runBlocking {
+        val cardAccount = AccountEntity(
+            id = 1004L,
+            name = "Card Account",
+            type = "CREDIT_CARD",
+            accountNumberLast4 = "5678",
+            isDefault = true
+        )
+        fakeAccountDao.accounts.add(cardAccount)
+
+        val incoming = TransactionEntity(
+            amount = 50.0,
+            merchant = "Card Account",
+            currency = "EUR",
+            timestamp = 1_300_000L,
+            category = "",
+            rawSms = "Prípísanie sumy: 50,00 EUR na karte *5678",
+            isIncome = true
+        )
+
+        val result = useCase(incoming)
+        assertNotNull(result)
+        assertEquals(1004L, result!!.accountId)
     }
 }

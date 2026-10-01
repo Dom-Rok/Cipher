@@ -28,8 +28,11 @@ object RegionRuleProvider {
                 CanadaParserRules,
                 AustraliaParserRules,
                 UaeParserRules,
-                SingaporeParserRules
+                SingaporeParserRules,
+                SlovakParserRules
             )
+        } else if (primary == EuroParserRules) {
+            listOf(primary, SlovakParserRules, GlobalFallbackRules)
         } else {
             listOf(primary, GlobalFallbackRules)
         }

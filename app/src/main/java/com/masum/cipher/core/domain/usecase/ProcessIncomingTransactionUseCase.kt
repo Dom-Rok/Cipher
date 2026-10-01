@@ -9,6 +9,7 @@ import com.masum.cipher.core.data.local.entity.MerchantAliasEntity
 import com.masum.cipher.core.data.local.entity.TransactionEntity
 import com.masum.cipher.core.data.local.pref.UserPreferences
 import com.masum.cipher.core.domain.CategorizerEngine
+import com.masum.cipher.core.domain.model.AccountNumbers
 import com.masum.cipher.core.domain.model.TransactionCategory
 import com.masum.cipher.core.notifications.LocalNotificationManager
 import kotlinx.coroutines.flow.first
@@ -90,13 +91,25 @@ class ProcessIncomingTransactionUseCase @Inject constructor(
             }
         }
 
+        val accounts = accountDao?.getAllAccounts() ?: emptyList()
+        val rawMessage = transaction.rawSms.orEmpty()
+        val otherOwnAccount = findOtherMentionedAccount(rawMessage, resolvedAccountId, accounts)
+        val isInternalTransfer = detectInternalTransfer(rawMessage, finalMerchant, accounts) ||
+            (hasTransferKeyword(rawMessage) && (otherOwnAccount != null || mentionsSavingsAccount(rawMessage)))
+        val transferCounterpart = findTransferCounterpart(transaction, resolvedAccountId)
+        val effectiveCategory = if (isInternalTransfer || transferCounterpart != null) TRANSFER_CATEGORY else finalCategory
+
         val newTx = transaction.copy(
-            merchant = finalMerchant,
-            category = finalCategory,
+            merchant = if (isInternalTransfer && otherOwnAccount != null) otherOwnAccount.name else finalMerchant,
+            category = effectiveCategory,
             accountId = resolvedAccountId
         )
         val insertedId = transactionDao.insertTransaction(newTx)
         val savedTx = newTx.copy(id = insertedId)
+
+        if (transferCounterpart != null && !transferCounterpart.category.equals(TRANSFER_CATEGORY, ignoreCase = true)) {
+            transactionDao.updateCategory(transferCounterpart.id, TRANSFER_CATEGORY)
+        }
 
         onSyncWidget?.invoke() ?: widgetSyncManager?.syncWidget()
         if (settings?.notifyAllTransactions == true) {
@@ -104,7 +117,7 @@ class ProcessIncomingTransactionUseCase @Inject constructor(
         }
         checkBudgetAlert(previousSpent)
 
-        if (finalCategory == TransactionCategory.OTHERS.name) {
+        if (effectiveCategory == TransactionCategory.OTHERS.name) {
             val count = transactionDao.getUncategorizedCount()
             if (count > 0) {
                 onNotifyUncategorized?.invoke(count) ?: localNotificationManager?.showUncategorizedReminderNotification(count)
@@ -133,7 +146,81 @@ class ProcessIncomingTransactionUseCase @Inject constructor(
         }
     }
 
+    companion object {
+        private const val TRANSFER_CATEGORY = "TRANSFER"
+        private const val TRANSFER_PAIR_WINDOW_MS = 10 * 60_000L
+        private val TRANSFER_KEYWORDS = listOf(
+            "pripísanie", "prípísanie", "internal transfer", "account to account", "transfer between",
+            "vklad", "prevod", "transferred", "between accounts"
+        )
+
+        // Slovak banks' own names for a savings account, e.g. Prima banka's "Odkladací účet"
+        private val SAVINGS_ACCOUNT_PHRASES = listOf("odkladac", "sporiac", "savings account", "savings vault")
+
+        // Masked IBAN such as "SK*5600*18841*001": the last group identifies the account
+        private val MASKED_ACCOUNT_PATTERN = java.util.regex.Pattern.compile("(?i)\\b[A-Z]{2}\\d{0,2}(?:\\*\\d+)+\\*(\\d{3,4})\\b")
+    }
+
+    private fun mentionsSavingsAccount(rawMessage: String): Boolean {
+        return SAVINGS_ACCOUNT_PHRASES.any { rawMessage.contains(it, ignoreCase = true) }
+    }
+
+    // Another of the user's accounts named in the message by its masked number, e.g. the savings
+    // account in "Prevod z Odkladacieho účtu SK*5600*18841*021".
+    private fun findOtherMentionedAccount(
+        rawMessage: String,
+        resolvedAccountId: Long?,
+        accounts: List<AccountEntity>
+    ): AccountEntity? {
+        val matcher = MASKED_ACCOUNT_PATTERN.matcher(rawMessage)
+        while (matcher.find()) {
+            val digits = matcher.group(1) ?: continue
+            val account = accounts.firstOrNull { acc -> AccountNumbers.matches(acc.accountNumberLast4, digits) }
+            if (account != null && account.id != resolvedAccountId) return account
+        }
+        return null
+    }
+
     private fun monthStart(): Long = com.masum.cipher.core.util.DateTimeUtils.currentMonthStart()
+
+    private fun detectInternalTransfer(
+        rawMessage: String,
+        merchant: String,
+        accounts: List<AccountEntity>
+    ): Boolean {
+        if (rawMessage.isBlank() || accounts.isEmpty()) return false
+        if (!hasTransferKeyword(rawMessage)) return false
+
+        val cleanMerchant = merchant.lowercase()
+        return accounts.any { acc ->
+            acc.name.trim().lowercase() == cleanMerchant ||
+            cleanMerchant.contains(acc.name.trim().lowercase())
+        }
+    }
+
+    private fun hasTransferKeyword(rawMessage: String?): Boolean {
+        if (rawMessage.isNullOrBlank()) return false
+        return TRANSFER_KEYWORDS.any { rawMessage.contains(it, ignoreCase = true) }
+    }
+
+    // A transfer between two of the user's accounts usually arrives as two notifications, often
+    // from different apps: money out of one account and the same amount into another shortly
+    // after. Pair them when either side reads like a transfer.
+    private suspend fun findTransferCounterpart(transaction: TransactionEntity, accountId: Long?): TransactionEntity? {
+        if (transaction.rawSms == null || accountId == null) return null
+        val candidates = transactionDao.findByAmountBetween(
+            transaction.amount,
+            !transaction.isIncome,
+            transaction.timestamp - TRANSFER_PAIR_WINDOW_MS,
+            transaction.timestamp + TRANSFER_PAIR_WINDOW_MS
+        )
+        return candidates.firstOrNull { other ->
+            other.accountId != null &&
+                other.accountId != accountId &&
+                other.currency.equals(transaction.currency, ignoreCase = true) &&
+                (hasTransferKeyword(transaction.rawSms) || hasTransferKeyword(other.rawSms))
+        }
+    }
 
     private fun resolveAccount(
         rawMessage: String,
@@ -142,7 +229,8 @@ class ProcessIncomingTransactionUseCase @Inject constructor(
         if (accounts.isEmpty()) return null
 
         val digitPatterns = listOf(
-            java.util.regex.Pattern.compile("(?i)(?:a/c|acct|account|card|ending|ending with|ending in|no\\.?|num|xx|x{2,}|[*]{2,}|\\.{2,})\\s*[:#.-]?\\s*[*xX.]*(\\d{3,4})\\b"),
+            MASKED_ACCOUNT_PATTERN,
+            java.util.regex.Pattern.compile("(?i)(?:a/c|acct|account|card|ending|ending with|ending in|no\\.?|num|xx|x{2,}|[*]+|\\.{2,})\\s*[:#.-]?\\s*[*xX.]*(\\d{3,4})\\b"),
             java.util.regex.Pattern.compile("(?i)[*xX]{2,}(\\d{3,4})\\b"),
             java.util.regex.Pattern.compile("(?i)\\b(\\d{4})\\s*(?:is debited|was debited|is credited|was credited|used at|spent on)")
         )
@@ -163,11 +251,7 @@ class ProcessIncomingTransactionUseCase @Inject constructor(
 
         if (extractedDigits != null) {
             val matchedByDigits = accounts.firstOrNull { acc ->
-                val accLast4 = acc.accountNumberLast4?.trim()
-                if (accLast4.isNullOrBlank()) false
-                else accLast4 == extractedDigits ||
-                    (accLast4.length >= 3 && extractedDigits.endsWith(accLast4)) ||
-                    (extractedDigits.length >= 3 && accLast4.endsWith(extractedDigits))
+                AccountNumbers.matches(acc.accountNumberLast4, extractedDigits)
             }
             if (matchedByDigits != null) {
                 return matchedByDigits.id

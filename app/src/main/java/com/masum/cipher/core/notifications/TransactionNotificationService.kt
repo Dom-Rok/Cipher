@@ -69,16 +69,22 @@ class TransactionNotificationService : NotificationListenerService() {
         val summaryText = extras.getCharSequence(android.app.Notification.EXTRA_SUMMARY_TEXT)?.toString().orEmpty()
         val infoText = extras.getCharSequence(android.app.Notification.EXTRA_INFO_TEXT)?.toString().orEmpty()
 
-        val fullMessage = listOf(title, titleBig, text, bigText, subText, textLines, summaryText, infoText)
-            .filter { it.isNotBlank() }
-            .distinct()
-            .joinToString(" ")
-            .trim()
+        val fullMessage = NotificationTextAssembler.assemble(
+            title = title,
+            titleBig = titleBig,
+            text = text,
+            bigText = bigText,
+            subText = subText,
+            textLines = textLines,
+            summaryText = summaryText,
+            infoText = infoText
+        )
         if (fullMessage.isBlank()) return
 
         val currencyCode = cachedCurrencyCode
         serviceScope.launch {
-            val parsedTx = transactionParser.parse(fullMessage, currencyCode)
+            val header = NotificationTextAssembler.assemble(title = title, titleBig = titleBig)
+            val parsedTx = transactionParser.parse(fullMessage, currencyCode, header)
             if (parsedTx != null) {
                 val appLabel = try {
                     val pm = packageManager

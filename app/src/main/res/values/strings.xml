@@ -607,9 +607,9 @@
     <string name="account_name_label">ACCOUNT NAME</string>
     <string name="account_name_placeholder">e.g. HDFC Bank, Cash Wallet, Amex</string>
     <string name="account_type_label">ACCOUNT TYPE</string>
-    <string name="account_last4_label">CARD / ACCOUNT DIGITS (LAST 4)</string>
+    <string name="account_last4_label">CARD / ACCOUNT DIGITS (LAST 3–4)</string>
     <string name="account_last4_placeholder">•••• 4821</string>
-    <string name="account_last4_desc">Matches incoming bank SMS alerts to this account automatically</string>
+    <string name="account_last4_desc">Matches bank alerts to this account. Separate several numbers with commas, e.g. card and account: 3677, 001</string>
     <string name="account_theme_accent_label">CARD THEME &amp; ACCENT</string>
     <string name="account_icon_label">CARD ICON</string>
     <string name="account_primary_toggle_label">PRIMARY ACCOUNT</string>

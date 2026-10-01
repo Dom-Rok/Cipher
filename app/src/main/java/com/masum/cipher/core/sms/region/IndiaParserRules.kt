@@ -14,8 +14,8 @@ object IndiaParserRules : RegionParserRules {
     )
 
     override val exclusionKeywords: List<String> = listOf(
-        "otp", "verification code", "secret code", "tollfree", "helpline", "dial", "win", "won", "offered", "validity",
-        "plan", "recharge", "expires", "pack", "unlimited", "data", "exclusive", "discount", "reward", "points",
+        "otp", "verification code", "secret code", "tollfree", "helpline", "dial", "win", "winner", "winning", "won", "offered", "validity",
+        "plan", "recharge", "expire", "expires", "pack", "unlimited", "data", "exclusive", "discount", "reward", "points",
         "eligible", "pre-approved", "credit limit", "claim", "offer", "limited period", "active"
     )
 
