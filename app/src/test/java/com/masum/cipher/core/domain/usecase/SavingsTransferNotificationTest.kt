@@ -199,17 +199,17 @@ class SavingsTransferNotificationTest {
 
     @Test
     fun `money from main to savings account in the same bank is an outgoing transfer`() = runBlocking {
-        // Mirror of the real notification above for the opposite direction
+        // Real Prima banka notification for moving money from main to the savings account
         postNotification(
             "Wallet",
-            "Odpísanie sumy: 100,00 EUR",
-            "Z účtu SK*5600*18841*001 bola odpísaná suma 100,00 EUR, Prevod na Odkladací účet SK*5600*18841*021, " +
-                "DISPO: 26,76 EUR (26,76 EUR), dňa: 01.10.2026 08:00:00",
+            "Príkaz na úhradu: 10,00 EUR",
+            "Z účtu SK*5600*18841*001 bola odpísaná suma 10,00 EUR, Prevod na Odkladací účet SK*5600*18841*021, " +
+                "DISPO: 26,76 EUR (26,76 EUR), dňa: 01.10.2026 10:54:07",
             timestamp = 1_000_000L
         )
 
         val moneyOut = fromNotifications.single()
-        assertEquals(100.0, moneyOut.amount, 0.001)
+        assertEquals(10.0, moneyOut.amount, 0.001)
         assertFalse(moneyOut.isIncome)
         assertEquals(current.id, moneyOut.accountId)
         assertEquals("TRANSFER", moneyOut.category)
@@ -218,8 +218,8 @@ class SavingsTransferNotificationTest {
         val moneyIntoSavings = autoAdded.single()
         assertTrue(moneyIntoSavings.isIncome)
         assertEquals(primaSavings.id, moneyIntoSavings.accountId)
-        assertEquals(-100.0, balanceOf(current), 0.001)
-        assertEquals(100.0, balanceOf(primaSavings), 0.001)
+        assertEquals(-10.0, balanceOf(current), 0.001)
+        assertEquals(10.0, balanceOf(primaSavings), 0.001)
     }
 
     @Test

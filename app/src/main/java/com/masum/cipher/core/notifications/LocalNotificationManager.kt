@@ -360,14 +360,30 @@ class LocalNotificationManager @Inject constructor(
             val currentAccount = allAccounts.find { it.id == transaction.accountId }
             val accountSuffix = currentAccount?.let { " [${it.name}]" } ?: ""
 
+            val isTransfer = transaction.category.equals("TRANSFER", ignoreCase = true)
+            val title = when {
+                isTransfer -> "Transfer"
+                transaction.isIncome -> "Money Received"
+                else -> "New Expense"
+            }
+            val text = when {
+                isTransfer && transaction.isIncome -> "$amountStr moved in from ${transaction.merchant}."
+                isTransfer -> "$amountStr moved to ${transaction.merchant}."
+                transaction.isIncome -> "You received $amountStr from ${transaction.merchant}."
+                else -> "You spent $amountStr at ${transaction.merchant}."
+            }
+
             val builder = NotificationCompat.Builder(context, CHANNEL_TRANSACTIONS)
                 .setSmallIcon(com.masum.cipher.R.drawable.ic_notification)
-                .setColor(if (transaction.isIncome) "#10B981".toColorInt() else "#F43F5E".toColorInt())
-                .setContentTitle((if (transaction.isIncome) "Money Received" else "New Expense") + accountSuffix)
-                .setContentText(
-                    if (transaction.isIncome) "You received $amountStr from ${transaction.merchant}."
-                    else "You spent $amountStr at ${transaction.merchant}."
+                .setColor(
+                    when {
+                        isTransfer -> "#6366F1".toColorInt()
+                        transaction.isIncome -> "#10B981".toColorInt()
+                        else -> "#F43F5E".toColorInt()
+                    }
                 )
+                .setContentTitle(title + accountSuffix)
+                .setContentText(text)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setContentIntent(categorizePendingIntent)
                 .addAction(addNoteAction)
